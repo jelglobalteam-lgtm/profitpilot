@@ -4,6 +4,7 @@ import { PesquisaClient } from "./pesquisa-client";
 import { getCurrentUser } from "@/lib/auth";
 import { roleRank } from "@/lib/rbac";
 import { listResearchItems } from "@/lib/research";
+import { listResearchKeywords } from "@/lib/research-keywords";
 import type { ResearchKind, ResearchStatus } from "@/lib/research-types";
 
 export const metadata: Metadata = {
@@ -44,11 +45,13 @@ export default async function PesquisaPage({
     kind,
     status,
   });
+  const keywords = await listResearchKeywords(user);
   const canEdit = roleRank(user.role) >= roleRank("editor");
 
   return (
     <PesquisaClient
       rows={rows}
+      keywords={keywords}
       canEdit={canEdit}
       initialQ={sp.q ?? ""}
       initialKind={kind}
