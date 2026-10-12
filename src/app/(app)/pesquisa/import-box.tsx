@@ -10,6 +10,7 @@ export function ImportBox() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [pasted, setPasted] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
 
   function downloadTemplate() {
@@ -20,6 +21,20 @@ export function ImportBox() {
     a.download = "modelo-importacao-pesquisa.txt";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function importPasted() {
+    const text = pasted;
+    if (!text.trim()) return;
+    setResult(null);
+    startTransition(async () => {
+      const res = await importResearchTxtAction(text);
+      setResult(res);
+      if (res.ok && res.created > 0) {
+        setPasted("");
+        router.refresh();
+      }
+    });
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -63,6 +78,21 @@ export function ImportBox() {
           onChange={onFile}
         />
       </div>
+      <textarea
+        value={pasted}
+        onChange={(e) => setPasted(e.target.value)}
+        rows={4}
+        placeholder="Ou cole aqui o texto preenchido (mesmo formato do modelo)"
+        className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs outline-none focus:border-accent"
+      />
+      <button
+        type="button"
+        disabled={pending || !pasted.trim()}
+        onClick={importPasted}
+        className="mt-2 inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground disabled:opacity-50"
+      >
+        {pending ? "A importar…" : "Importar texto colado"}
+      </button>
       {result && (
         <div className="mt-2 text-xs">
           {result.error ? (
