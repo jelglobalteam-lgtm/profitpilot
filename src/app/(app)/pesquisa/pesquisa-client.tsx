@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type { ResearchKeywordView } from "@/lib/research-keywords";
 import { KeywordsPanel } from "./keywords-panel";
 import { StoresSection } from "./stores-section";
+import { ImportBox } from "./import-box";
 import type { CompetitorStoreView } from "@/lib/competitor-stores-types";
 import {
   createResearchItemAction,
@@ -241,6 +242,7 @@ export function PesquisaClient({
             </button>
           ))}
         </div>
+        {canEdit && <ImportBox />}
         {tab === "stores" ? (
           <StoresSection stores={stores} canEdit={canEdit} />
         ) : (
