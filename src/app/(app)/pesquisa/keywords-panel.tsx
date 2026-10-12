@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, Copy, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { ResearchKeywordView } from "@/lib/research-keywords";
 import {
   addKeywordAction,
@@ -20,6 +20,17 @@ export function KeywordsPanel({
   const router = useRouter();
   const [text, setText] = useState("");
   const [country, setCountry] = useState("");
+  const [filterCountry, setFilterCountry] = useState("");
+  const countries = useMemo(
+    () =>
+      Array.from(new Set(keywords.map((k) => k.country).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [keywords],
+  );
+  const visible = filterCountry
+    ? keywords.filter((k) => k.country === filterCountry)
+    : keywords;
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -86,7 +97,7 @@ export function KeywordsPanel({
             <button
               type="submit"
               disabled={pending || !text.trim()}
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
             >
               Adicionar
             </button>
@@ -95,13 +106,28 @@ export function KeywordsPanel({
 
         {error && <p className="mt-2 text-xs text-negative">{error}</p>}
 
+        {countries.length > 0 && (
+          <select
+            value={filterCountry}
+            onChange={(e) => setFilterCountry(e.target.value)}
+            className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          >
+            <option value="">Todos os países</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
+
         <ul className="mt-3 max-h-[70vh] divide-y divide-border overflow-y-auto">
-          {keywords.length === 0 && (
+          {visible.length === 0 && (
             <li className="py-6 text-center text-xs text-muted-foreground">
               Ainda sem keywords.
             </li>
           )}
-          {keywords.map((k) => (
+          {visible.map((k) => (
             <li key={k.id} className="flex items-center gap-2 py-2">
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm">{k.text}</p>

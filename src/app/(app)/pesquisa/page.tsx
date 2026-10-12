@@ -4,6 +4,7 @@ import { PesquisaClient } from "./pesquisa-client";
 import { getCurrentUser } from "@/lib/auth";
 import { roleRank } from "@/lib/rbac";
 import { listResearchItems } from "@/lib/research";
+import { listCompetitorStores } from "@/lib/competitor-stores";
 import { listResearchKeywords } from "@/lib/research-keywords";
 import type { ResearchKind, ResearchStatus } from "@/lib/research-types";
 
@@ -29,13 +30,7 @@ export default async function PesquisaPage({
       ? (sp.kind as ResearchKind)
       : "all";
   const status = (
-    [
-      "new",
-      "shortlist",
-      "testing",
-      "winner",
-      "rejected",
-    ] as ResearchStatus[]
+    ["new", "shortlist", "testing", "winner", "rejected"] as ResearchStatus[]
   ).includes(sp.status as ResearchStatus)
     ? (sp.status as ResearchStatus)
     : "all";
@@ -46,12 +41,14 @@ export default async function PesquisaPage({
     status,
   });
   const keywords = await listResearchKeywords(user);
+  const stores = await listCompetitorStores(user);
   const canEdit = roleRank(user.role) >= roleRank("editor");
 
   return (
     <PesquisaClient
       rows={rows}
       keywords={keywords}
+      stores={stores}
       canEdit={canEdit}
       initialQ={sp.q ?? ""}
       initialKind={kind}
