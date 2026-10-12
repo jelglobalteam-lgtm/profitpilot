@@ -1,12 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, Copy, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Pencil,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import type { ResearchKeywordView } from "@/lib/research-keywords";
 import {
   addKeywordAction,
   deleteKeywordAction,
+  setKeywordCountryAction,
   voteKeywordAction,
 } from "./keyword-actions";
 
@@ -106,7 +114,7 @@ export function KeywordsPanel({
 
         {error && <p className="mt-2 text-xs text-negative">{error}</p>}
 
-        {countries.length > 0 && (
+        {
           <select
             value={filterCountry}
             onChange={(e) => setFilterCountry(e.target.value)}
@@ -119,7 +127,7 @@ export function KeywordsPanel({
               </option>
             ))}
           </select>
-        )}
+        }
 
         <ul className="mt-3 max-h-[70vh] divide-y divide-border overflow-y-auto">
           {visible.length === 0 && (
@@ -131,21 +139,42 @@ export function KeywordsPanel({
             <li key={k.id} className="flex items-center gap-2 py-2">
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm">{k.text}</p>
-                {k.country && (
-                  <button
-                    type="button"
-                    title="Copiar país"
-                    onClick={() => copy(`${k.id}-c`, k.country)}
-                    className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
-                  >
-                    {k.country}
-                    {copied === `${k.id}-c` ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </button>
-                )}
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {k.country && (
+                    <button
+                      type="button"
+                      title="Copiar país"
+                      onClick={() => copy(`${k.id}-c`, k.country)}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                    >
+                      {k.country}
+                      {copied === `${k.id}-c` ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      title={k.country ? "Alterar país" : "Definir país"}
+                      disabled={pending}
+                      onClick={() => {
+                        const v = window.prompt(
+                          "País desta keyword (ex. DE):",
+                          k.country,
+                        );
+                        if (v === null) return;
+                        run(() => setKeywordCountryAction(k.id, v));
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-accent hover:bg-muted"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      {k.country ? "" : "país"}
+                    </button>
+                  )}
+                </div>
               </div>
               <button
                 type="button"

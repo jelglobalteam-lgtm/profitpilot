@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import {
-  ArrowDownRight,
-  ArrowRight,
-  ArrowUpRight,
+  Minus,
+  TrendingDown,
+  TrendingUp,
   ExternalLink,
   Pencil,
   Plus,
@@ -98,19 +98,19 @@ function TrendIcon({ trend }: { trend: StoreTrend }) {
   if (trend === "up")
     return (
       <span title={STORE_TREND_LABEL.up} className="text-positive">
-        <ArrowUpRight className="h-5 w-5" />
+        <TrendingUp className="h-5 w-5" />
       </span>
     );
   if (trend === "down")
     return (
       <span title={STORE_TREND_LABEL.down} className="text-negative">
-        <ArrowDownRight className="h-5 w-5" />
+        <TrendingDown className="h-5 w-5" />
       </span>
     );
   if (trend === "flat")
     return (
       <span title={STORE_TREND_LABEL.flat} className="text-muted-foreground">
-        <ArrowRight className="h-5 w-5" />
+        <Minus className="h-5 w-5" />
       </span>
     );
   return <span className="text-muted-foreground">—</span>;

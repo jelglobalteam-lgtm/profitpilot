@@ -94,3 +94,38 @@ export async function deleteKeywordAction(id: string): Promise<Result> {
   revalidatePath("/pesquisa");
   return { ok: true };
 }
+
+export async function setKeywordCountryAction(
+  id: string,
+  rawCountry: string,
+): Promise<Result> {
+  const user = await requireEditor();
+  if (!user) return { error: "Sem permissão." };
+  if (!mongoose.isValidObjectId(id)) return { error: "ID inválido." };
+  const country = (rawCountry ?? "").trim().replace(/\s+/g, " ");
+  if (country.length > 40) return { error: "País demasiado longo." };
+
+  await connectToDatabase();
+  const workspaceId = new mongoose.Types.ObjectId(user.workspaceId);
+  const doc = await ResearchKeyword.findOne({
+    _id: id,
+    workspaceId,
+    deletedAt: null,
+  });
+  if (!doc) return { error: "Keyword não encontrada." };
+
+  const key = (country ? `${doc.text}|${country}` : doc.text).toLowerCase();
+  const clash = await ResearchKeyword.exists({
+    workspaceId,
+    key,
+    deletedAt: null,
+    _id: { $ne: doc._id },
+  });
+  if (clash) return { error: "Essa keyword já existe para esse país." };
+
+  doc.country = country;
+  doc.key = key;
+  await doc.save();
+  revalidatePath("/pesquisa");
+  return { ok: true };
+}
