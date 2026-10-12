@@ -114,7 +114,7 @@ export function KeywordsPanel({
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder="País"
                 maxLength={40}
-                className={`${fieldCls} w-24 shrink-0`}
+                className={`${fieldCls.replace("w-full", "")} w-24 shrink-0`}
               />
               <button
                 type="submit"
