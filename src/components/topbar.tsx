@@ -1,3 +1,4 @@
+import { ProfileChip } from "@/components/profile-chip";
 import { Suspense } from "react";
 import { StoreSelector, type StoreOption } from "@/components/store-selector";
 import { WorkspaceSelector } from "@/components/workspace-selector";
@@ -104,6 +105,10 @@ export function Topbar({
               className="w-28 shrink-0 xl:w-32"
             />
           </Suspense>
+          <ProfileChip
+            name={user.name}
+            handle={user.email || (user.username ? `@${user.username}` : null)}
+          />
           <TopbarMoreMenu user={user} />
         </div>
       </div>

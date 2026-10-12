@@ -2,6 +2,7 @@ import "server-only";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { CompetitorStore } from "@/models/CompetitorStore";
+import { User } from "@/models/User";
 import { formatDateInput } from "@/lib/period";
 import type { CurrentUser } from "@/lib/auth";
 import type {
@@ -21,6 +22,20 @@ export async function listCompetitorStores(
     .sort({ monthlyVisits: -1, updatedAt: -1 })
     .limit(1000)
     .lean();
+  const ids = Array.from(
+    new Set(
+      docs
+        .map((d) => d.createdBy)
+        .filter(Boolean)
+        .map(String),
+    ),
+  );
+  const users = ids.length
+    ? await User.find({ _id: { $in: ids } })
+        .select("name")
+        .lean()
+    : [];
+  const names = new Map(users.map((u) => [String(u._id), u.name]));
   return docs.map((d) => ({
     id: String(d._id),
     name: d.name ?? "",
@@ -37,5 +52,6 @@ export async function listCompetitorStores(
     niche: d.niche ?? "",
     notes: d.notes ?? "",
     bestSellers: d.bestSellers ?? "",
+    authorName: d.createdBy ? (names.get(String(d.createdBy)) ?? null) : null,
   }));
 }

@@ -457,6 +457,11 @@ export function StoresSection({
                     {r.name || host(r.competitorLink)}
                     <ExternalLink className="h-3 w-3" />
                   </a>
+                  {r.authorName && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      por {r.authorName}
+                    </p>
+                  )}
                 </td>
                 <td className="px-3 py-3">{r.country || "—"}</td>
                 <td className="px-3 py-3 text-right tabular-nums">

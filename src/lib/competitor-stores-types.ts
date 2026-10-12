@@ -39,4 +39,5 @@ export type CompetitorStoreView = {
   niche: string;
   notes: string;
   bestSellers: string;
+  authorName: string | null;
 };
