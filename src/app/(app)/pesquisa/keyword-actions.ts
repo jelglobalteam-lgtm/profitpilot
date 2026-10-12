@@ -17,16 +17,21 @@ async function requireEditor() {
   return user;
 }
 
-export async function addKeywordAction(raw: string): Promise<Result> {
+export async function addKeywordAction(
+  raw: string,
+  rawCountry = "",
+): Promise<Result> {
   const user = await requireEditor();
   if (!user) return { error: "Sem permissão." };
   const text = (raw ?? "").trim().replace(/\s+/g, " ");
   if (!text) return { error: "Escreva uma keyword." };
   if (text.length > 120) return { error: "Keyword demasiado longa." };
+  const country = (rawCountry ?? "").trim().replace(/\s+/g, " ");
+  if (country.length > 40) return { error: "País demasiado longo." };
 
   await connectToDatabase();
   const workspaceId = new mongoose.Types.ObjectId(user.workspaceId);
-  const key = text.toLowerCase();
+  const key = (country ? `${text}|${country}` : text).toLowerCase();
   const exists = await ResearchKeyword.exists({
     workspaceId,
     key,
@@ -38,6 +43,7 @@ export async function addKeywordAction(raw: string): Promise<Result> {
     await ResearchKeyword.create({
       workspaceId,
       text,
+      country,
       key,
       createdBy: new mongoose.Types.ObjectId(user.id),
     });

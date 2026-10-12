@@ -7,6 +7,7 @@ import type { CurrentUser } from "@/lib/auth";
 export type ResearchKeywordView = {
   id: string;
   text: string;
+  country: string;
   likes: number;
   dislikes: number;
 };
@@ -26,6 +27,7 @@ export async function listResearchKeywords(
   return docs.map((d) => ({
     id: String(d._id),
     text: d.text,
+    country: d.country ?? "",
     likes: d.likes ?? 0,
     dislikes: d.dislikes ?? 0,
   }));

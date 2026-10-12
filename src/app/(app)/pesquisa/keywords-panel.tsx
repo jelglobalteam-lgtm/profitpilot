@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Check, Copy, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import type { ResearchKeywordView } from "@/lib/research-keywords";
 import {
@@ -19,6 +19,8 @@ export function KeywordsPanel({
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
+  const [country, setCountry] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -31,16 +33,27 @@ export function KeywordsPanel({
     });
   }
 
+  async function copy(id: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(id);
+      setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500);
+    } catch {
+      setError("Não foi possível copiar.");
+    }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const value = text;
     if (!value.trim()) return;
     setError(null);
     startTransition(async () => {
-      const res = await addKeywordAction(value);
+      const res = await addKeywordAction(value, country);
       if (res.error) setError(res.error);
       else {
         setText("");
+        setCountry("");
         router.refresh();
       }
     });
@@ -55,12 +68,19 @@ export function KeywordsPanel({
         </p>
 
         {canEdit && (
-          <form onSubmit={submit} className="mt-3 flex gap-2">
+          <form onSubmit={submit} className="mt-3 flex flex-wrap gap-2">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Nova keyword"
               maxLength={120}
+              className="min-w-0 flex-1 basis-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+            />
+            <input
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              placeholder="País (ex. DE)"
+              maxLength={40}
               className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
             />
             <button
@@ -83,9 +103,36 @@ export function KeywordsPanel({
           )}
           {keywords.map((k) => (
             <li key={k.id} className="flex items-center gap-2 py-2">
-              <span className="min-w-0 flex-1 break-words text-sm">
-                {k.text}
-              </span>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm">{k.text}</p>
+                {k.country && (
+                  <button
+                    type="button"
+                    title="Copiar país"
+                    onClick={() => copy(`${k.id}-c`, k.country)}
+                    className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                  >
+                    {k.country}
+                    {copied === `${k.id}-c` ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                title="Copiar keyword"
+                onClick={() => copy(k.id, k.text)}
+                className="rounded-lg border border-border p-1.5 hover:bg-muted"
+              >
+                {copied === k.id ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </button>
               <button
                 type="button"
                 title="Gosto"

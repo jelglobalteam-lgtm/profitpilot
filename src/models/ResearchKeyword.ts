@@ -9,6 +9,7 @@ const ResearchKeywordSchema = new Schema(
       index: true,
     },
     text: { type: String, required: true, trim: true },
+    country: { type: String, trim: true, default: "" },
     /** Versão normalizada (minúsculas) para evitar duplicados. */
     key: { type: String, required: true },
     likes: { type: Number, min: 0, default: 0 },
