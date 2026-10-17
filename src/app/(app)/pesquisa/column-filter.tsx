@@ -3,6 +3,7 @@
 import { ListFilter, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { norm } from "@/lib/research-import";
+import { formatDateInput } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
 export type ColKind = "values" | "num" | "date" | "text";
@@ -22,8 +23,43 @@ export type ColFilterState = {
   min?: string;
   max?: string;
   text?: string;
+  /** Atalho de datas escolhido (today, yesterday, d7, d14, d30, custom). */
+  preset?: string;
 };
 export type ColFilters = Record<string, ColFilterState>;
+
+const DATE_PRESETS = [
+  { id: "all", label: "Todas" },
+  { id: "today", label: "Hoje" },
+  { id: "yesterday", label: "Ontem" },
+  { id: "d7", label: "Últimos 7 dias" },
+  { id: "d14", label: "Últimos 14 dias" },
+  { id: "d30", label: "Últimos 30 dias" },
+  { id: "custom", label: "Personalizado" },
+] as const;
+
+function presetRange(id: string): { min: string; max: string } | null {
+  const day = (offset: number) => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return formatDateInput(d);
+  };
+  switch (id) {
+    case "today":
+      return { min: day(0), max: day(0) };
+    case "yesterday":
+      return { min: day(-1), max: day(-1) };
+    case "d7":
+      return { min: day(-6), max: day(0) };
+    case "d14":
+      return { min: day(-13), max: day(0) };
+    case "d30":
+      return { min: day(-29), max: day(0) };
+    default:
+      return null;
+  }
+}
 
 export function isActive(f: ColFilterState | undefined): boolean {
   return Boolean(
@@ -90,6 +126,7 @@ export function FilterHeader<T>({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [search, setSearch] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const active = isActive(filter);
@@ -145,6 +182,7 @@ export function FilterHeader<T>({
         left: Math.max(8, Math.min(r.left, window.innerWidth - 270)),
       });
       setSearch("");
+      setShowCustom(filter?.preset === "custom");
     }
     setOpen((o) => !o);
   }
@@ -245,7 +283,83 @@ export function FilterHeader<T>({
             </>
           )}
 
-          {(def.kind === "num" || def.kind === "date") && (
+          {def.kind === "date" && (
+            <div>
+              <ul className="space-y-0.5">
+                {DATE_PRESETS.map((pr) => {
+                  const selected =
+                    pr.id === "all"
+                      ? !active && !showCustom
+                      : pr.id === "custom"
+                        ? showCustom || filter?.preset === "custom"
+                        : filter?.preset === pr.id && !showCustom;
+                  return (
+                    <li key={pr.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (pr.id === "all") {
+                            setShowCustom(false);
+                            onChange(undefined);
+                          } else if (pr.id === "custom") {
+                            setShowCustom(true);
+                          } else {
+                            setShowCustom(false);
+                            const r = presetRange(pr.id)!;
+                            onChange({ ...r, preset: pr.id });
+                            setOpen(false);
+                          }
+                        }}
+                        className={cn(
+                          "w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                          selected
+                            ? "bg-accent/10 font-medium text-accent"
+                            : "hover:bg-muted",
+                          pr.id === "custom" &&
+                            !selected &&
+                            "text-muted-foreground",
+                        )}
+                      >
+                        {pr.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {showCustom && (
+                <div className="mt-2 space-y-2 border-t border-border pt-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">
+                      De
+                    </label>
+                    <input
+                      type="date"
+                      value={filter?.min ?? ""}
+                      onChange={(e) =>
+                        set({ min: e.target.value, preset: "custom" })
+                      }
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">
+                      Até
+                    </label>
+                    <input
+                      type="date"
+                      value={filter?.max ?? ""}
+                      onChange={(e) =>
+                        set({ max: e.target.value, preset: "custom" })
+                      }
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {def.kind === "num" && (
             <div className="space-y-2">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
@@ -253,8 +367,8 @@ export function FilterHeader<T>({
                 </label>
                 <input
                   autoFocus
-                  type={def.kind === "date" ? "date" : "number"}
-                  inputMode={def.kind === "num" ? "numeric" : undefined}
+                  type="number"
+                  inputMode="numeric"
                   value={filter?.min ?? ""}
                   onChange={(e) => set({ min: e.target.value })}
                   className={inputCls}
@@ -265,8 +379,8 @@ export function FilterHeader<T>({
                   Máximo
                 </label>
                 <input
-                  type={def.kind === "date" ? "date" : "number"}
-                  inputMode={def.kind === "num" ? "numeric" : undefined}
+                  type="number"
+                  inputMode="numeric"
                   value={filter?.max ?? ""}
                   onChange={(e) => set({ max: e.target.value })}
                   className={inputCls}
