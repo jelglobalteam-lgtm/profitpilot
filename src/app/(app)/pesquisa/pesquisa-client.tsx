@@ -22,6 +22,7 @@ import { KeywordsPanel } from "./keywords-panel";
 import { StoresSection } from "./stores-section";
 import { ImportBox } from "./import-box";
 import { ActivityToggle } from "./activity-toggle";
+import { GlobalSearch } from "./global-search";
 import type { CompetitorStoreView } from "@/lib/competitor-stores-types";
 import {
   createResearchItemAction,
@@ -232,6 +233,8 @@ export function PesquisaClient({
         <h1 className="text-2xl font-semibold tracking-tight">
           Product & Collection Research
         </h1>
+        <GlobalSearch items={allRows} stores={stores} keywords={keywords} />
+
         <div className="flex w-fit gap-1 rounded-lg border border-border bg-surface p-1 text-sm">
           {(
             [
