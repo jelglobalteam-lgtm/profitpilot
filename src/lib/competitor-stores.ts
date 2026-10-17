@@ -52,6 +52,8 @@ export async function listCompetitorStores(
     niche: d.niche ?? "",
     notes: d.notes ?? "",
     bestSellers: d.bestSellers ?? "",
+    activity:
+      d.activity === "active" || d.activity === "inactive" ? d.activity : "",
     authorName: d.createdBy ? (names.get(String(d.createdBy)) ?? null) : null,
   }));
 }

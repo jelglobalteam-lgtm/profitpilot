@@ -33,6 +33,8 @@ const CompetitorStoreSchema = new Schema(
     niche: { type: String, trim: true, default: "" },
     notes: { type: String, trim: true, default: "" },
     bestSellers: { type: String, trim: true, default: "" },
+    /** Ativa / Desativa (manual); "" = por definir. */
+    activity: { type: String, enum: ["active", "inactive", ""], default: "" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     deletedAt: { type: Date, default: null },
   },

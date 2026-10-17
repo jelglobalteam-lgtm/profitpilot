@@ -40,4 +40,5 @@ export type CompetitorStoreView = {
   notes: string;
   bestSellers: string;
   authorName: string | null;
+  activity: "active" | "inactive" | "";
 };

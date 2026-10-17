@@ -21,6 +21,7 @@ import type { ResearchKeywordView } from "@/lib/research-keywords";
 import { KeywordsPanel } from "./keywords-panel";
 import { StoresSection } from "./stores-section";
 import { ImportBox } from "./import-box";
+import { ActivityToggle } from "./activity-toggle";
 import type { CompetitorStoreView } from "@/lib/competitor-stores-types";
 import {
   createResearchItemAction,
@@ -525,6 +526,7 @@ export function PesquisaClient({
                     <th className="px-4 py-3">Market</th>
                     <th className="px-4 py-3">Gender</th>
                     <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3">Ativa?</th>
                     <th className="px-4 py-3">Links</th>
                     <th className="px-4 py-3">Notes</th>
                     {canEdit && <th className="px-4 py-3" />}
@@ -584,6 +586,14 @@ export function PesquisaClient({
                         >
                           {row.statusLabel}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <ActivityToggle
+                          target="item"
+                          id={row.id}
+                          value={row.activity}
+                          canEdit={canEdit}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
@@ -680,6 +690,15 @@ export function PesquisaClient({
                     >
                       {row.statusLabel}
                     </span>
+                  </div>
+
+                  <div className="mt-3">
+                    <ActivityToggle
+                      target="item"
+                      id={row.id}
+                      value={row.activity}
+                      canEdit={canEdit}
+                    />
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm">

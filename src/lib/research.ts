@@ -32,6 +32,7 @@ export type ResearchItemView = {
   angle: string;
   status: ResearchStatus;
   statusLabel: string;
+  activity: "active" | "inactive" | "";
   createdByName: string | null;
   updatedAtIso: string;
 };
@@ -51,16 +52,17 @@ function toView(
     notes?: string | null;
     angle?: string | null;
     status?: string | null;
+    activity?: string | null;
     createdBy?: mongoose.Types.ObjectId | null;
     updatedAt?: Date;
   },
   creatorNames: Map<string, string>,
 ): ResearchItemView {
-  const kind = (doc.kind === "collection" ? "collection" : "product") as ResearchKind;
+  const kind = (
+    doc.kind === "collection" ? "collection" : "product"
+  ) as ResearchKind;
   const gender = (
-    doc.gender === "female" ||
-    doc.gender === "male" ||
-    doc.gender === "unisex"
+    doc.gender === "female" || doc.gender === "male" || doc.gender === "unisex"
       ? doc.gender
       : "unknown"
   ) as ResearchGender;
@@ -97,7 +99,11 @@ function toView(
     angle: (doc.angle ?? "").trim(),
     status,
     statusLabel: RESEARCH_STATUS_LABEL[status],
-    createdByName: createdById ? creatorNames.get(createdById) ?? null : null,
+    activity:
+      doc.activity === "active" || doc.activity === "inactive"
+        ? doc.activity
+        : "",
+    createdByName: createdById ? (creatorNames.get(createdById) ?? null) : null,
     updatedAtIso: doc.updatedAt
       ? new Date(doc.updatedAt).toISOString()
       : researchedAt.toISOString(),

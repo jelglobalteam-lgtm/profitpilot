@@ -23,6 +23,7 @@ import {
 } from "@/lib/competitor-stores-types";
 import { formatDateInput } from "@/lib/period";
 import { cn } from "@/lib/utils";
+import { ActivityToggle } from "./activity-toggle";
 import { deleteStoreAction, saveStoreAction } from "./store-actions";
 
 const inputCls =
@@ -415,7 +416,7 @@ export function StoresSection({
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[1100px] text-left text-sm">
+        <table className="w-full min-w-[1200px] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
               <th className="px-3 py-3">Loja</th>
@@ -429,6 +430,7 @@ export function StoresSection({
               <th className="px-3 py-3">Nicho</th>
               <th className="px-3 py-3">Verified</th>
               <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3">Ativa?</th>
               <th className="px-3 py-3">Best Sellers</th>
               <th className="px-3 py-3">Notes</th>
               {canEdit && <th className="px-3 py-3" />}
@@ -438,7 +440,7 @@ export function StoresSection({
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={canEdit ? 14 : 13}
+                  colSpan={canEdit ? 15 : 14}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   Ainda sem lojas.
@@ -504,6 +506,14 @@ export function StoresSection({
                   >
                     {STORE_STATUS_LABEL[r.status]}
                   </span>
+                </td>
+                <td className="px-3 py-3">
+                  <ActivityToggle
+                    target="store"
+                    id={r.id}
+                    value={r.activity}
+                    canEdit={canEdit}
+                  />
                 </td>
                 <td className="max-w-[200px] px-3 py-3 text-muted-foreground">
                   <p className="line-clamp-3 whitespace-pre-line">

@@ -38,6 +38,8 @@ const ResearchItemSchema = new Schema(
       default: "new",
       index: true,
     },
+    /** Ativa / Desativa (manual); "" = por definir. */
+    activity: { type: String, enum: ["active", "inactive", ""], default: "" },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
