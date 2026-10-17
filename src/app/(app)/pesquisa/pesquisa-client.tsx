@@ -23,6 +23,8 @@ import { StoresSection } from "./stores-section";
 import { ImportBox } from "./import-box";
 import { ActivityToggle } from "./activity-toggle";
 import { GlobalSearch } from "./global-search";
+import { ActivityFilter, type ActivityFilterValue } from "./activity-filter";
+import { norm } from "@/lib/research-import";
 import type { CompetitorStoreView } from "@/lib/competitor-stores-types";
 import {
   createResearchItemAction,
@@ -142,22 +144,6 @@ export function PesquisaClient({
     setForm((prev) => ({ ...prev, ...patch }));
   }
 
-  function applyFilters(next?: {
-    q?: string;
-    kind?: ResearchKind | "all";
-    status?: ResearchStatus | "all";
-  }) {
-    const params = new URLSearchParams();
-    const nextQ = next?.q ?? q;
-    const nextKind = next?.kind ?? kindFilter;
-    const nextStatus = next?.status ?? statusFilter;
-    if (nextQ.trim()) params.set("q", nextQ.trim());
-    if (nextKind !== "all") params.set("kind", nextKind);
-    if (nextStatus !== "all") params.set("status", nextStatus);
-    const qs = params.toString();
-    router.push(qs ? `/pesquisa?${qs}` : "/pesquisa");
-  }
-
   function run(action: () => Promise<{ error?: string }>) {
     setError(null);
     startTransition(async () => {
@@ -216,16 +202,22 @@ export function PesquisaClient({
     return [...set].sort((a, b) => a.localeCompare(b, "pt"));
   }, [allRows]);
 
-  const [activityFilter, setActivityFilter] = useState<
-    "" | "active" | "inactive"
-  >("");
-  const rows = useMemo(
-    () =>
-      activityFilter
-        ? allRows.filter((r) => r.activity === activityFilter)
-        : allRows,
-    [allRows, activityFilter],
-  );
+  const [activityFilter, setActivityFilter] =
+    useState<ActivityFilterValue>("active");
+  const rows = useMemo(() => {
+    const term = norm(q);
+    return allRows.filter((r) => {
+      if (activityFilter && r.activity !== activityFilter) return false;
+      if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!term) return true;
+      return norm(
+        [r.name, r.market, r.notes, r.angle, r.kindLabel, r.genderLabel].join(
+          " ",
+        ),
+      ).includes(term);
+    });
+  }, [allRows, activityFilter, kindFilter, statusFilter, q]);
 
   return (
     <div className="mx-auto max-w-[1600px] lg:flex lg:items-start lg:gap-6">
@@ -469,9 +461,6 @@ export function PesquisaClient({
                     className={cn(inputCls, "pl-9")}
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") applyFilters({ q });
-                    }}
                     placeholder="Nome, market, notas…"
                   />
                 </div>
@@ -484,7 +473,6 @@ export function PesquisaClient({
                   onChange={(e) => {
                     const v = e.target.value as ResearchKind | "all";
                     setKindFilter(v);
-                    applyFilters({ kind: v });
                   }}
                 >
                   <option value="all">Todos</option>
@@ -503,7 +491,6 @@ export function PesquisaClient({
                   onChange={(e) => {
                     const v = e.target.value as ResearchStatus | "all";
                     setStatusFilter(v);
-                    applyFilters({ status: v });
                   }}
                 >
                   <option value="all">Todos</option>
@@ -514,47 +501,16 @@ export function PesquisaClient({
                   ))}
                 </select>
               </div>
-              <button
-                type="button"
-                onClick={() => applyFilters()}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-              >
-                Filtrar
-              </button>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
                 {rows.length} entrada{rows.length === 1 ? "" : "s"}
               </p>
-              <div className="inline-flex overflow-hidden rounded-lg border border-border text-xs font-medium">
-                {(
-                  [
-                    ["", "Todas"],
-                    ["active", "Ativas"],
-                    ["inactive", "Desativadas"],
-                  ] as const
-                ).map(([k, l], i) => (
-                  <button
-                    key={k || "all"}
-                    type="button"
-                    onClick={() => setActivityFilter(k)}
-                    className={cn(
-                      "px-3 py-1.5 transition-colors",
-                      i > 0 && "border-l border-border",
-                      activityFilter === k
-                        ? k === "active"
-                          ? "bg-positive text-white"
-                          : k === "inactive"
-                            ? "bg-negative text-white"
-                            : "bg-accent text-accent-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
+              <ActivityFilter
+                value={activityFilter}
+                onChange={setActivityFilter}
+              />
             </div>
 
             {/* Desktop table */}

@@ -24,6 +24,7 @@ import {
 import { formatDateInput } from "@/lib/period";
 import { cn } from "@/lib/utils";
 import { ActivityToggle } from "./activity-toggle";
+import { ActivityFilter, type ActivityFilterValue } from "./activity-filter";
 import { deleteStoreAction, saveStoreAction } from "./store-actions";
 
 const inputCls =
@@ -130,7 +131,7 @@ export function StoresSection({
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState("");
   const [status, setStatus] = useState<StoreStatus | "">("");
-  const [activity, setActivity] = useState<"" | "active" | "inactive">("");
+  const [activity, setActivity] = useState<ActivityFilterValue>("active");
   const [q, setQ] = useState("");
 
   const countries = useMemo(
@@ -413,17 +414,7 @@ export function StoresSection({
         </div>
         <div>
           <label className={labelCls}>Ativa?</label>
-          <select
-            className={inputCls}
-            value={activity}
-            onChange={(e) =>
-              setActivity(e.target.value as "" | "active" | "inactive")
-            }
-          >
-            <option value="">Todas</option>
-            <option value="active">Ativas</option>
-            <option value="inactive">Desativadas</option>
-          </select>
+          <ActivityFilter value={activity} onChange={setActivity} />
         </div>
       </div>
 

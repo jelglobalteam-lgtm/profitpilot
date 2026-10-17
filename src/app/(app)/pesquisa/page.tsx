@@ -35,11 +35,7 @@ export default async function PesquisaPage({
     ? (sp.status as ResearchStatus)
     : "all";
 
-  const rows = await listResearchItems(user, {
-    q: sp.q,
-    kind,
-    status,
-  });
+  const rows = await listResearchItems(user, {});
   const keywords = await listResearchKeywords(user);
   const stores = await listCompetitorStores(user);
   const canEdit = roleRank(user.role) >= roleRank("editor");
