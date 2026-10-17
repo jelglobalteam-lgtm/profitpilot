@@ -130,6 +130,7 @@ export function StoresSection({
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState("");
   const [status, setStatus] = useState<StoreStatus | "">("");
+  const [activity, setActivity] = useState<"" | "active" | "inactive">("");
   const [q, setQ] = useState("");
 
   const countries = useMemo(
@@ -145,6 +146,7 @@ export function StoresSection({
     return stores.filter((s) => {
       if (country && s.country !== country) return false;
       if (status && s.status !== status) return false;
+      if (activity && s.activity !== activity) return false;
       if (!term) return true;
       return [
         s.name,
@@ -158,7 +160,7 @@ export function StoresSection({
         .toLowerCase()
         .includes(term);
     });
-  }, [stores, country, status, q]);
+  }, [stores, country, status, activity, q]);
 
   const patch = (p: Partial<Form>) => setForm((f) => ({ ...f, ...p }));
   const isEditing = Boolean(form.id);
@@ -407,6 +409,20 @@ export function StoresSection({
                 {STORE_STATUS_LABEL[s]}
               </option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Ativa?</label>
+          <select
+            className={inputCls}
+            value={activity}
+            onChange={(e) =>
+              setActivity(e.target.value as "" | "active" | "inactive")
+            }
+          >
+            <option value="">Todas</option>
+            <option value="active">Ativas</option>
+            <option value="inactive">Desativadas</option>
           </select>
         </div>
       </div>

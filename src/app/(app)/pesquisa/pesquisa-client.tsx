@@ -105,7 +105,7 @@ function statusTone(status: ResearchStatus): string {
 }
 
 export function PesquisaClient({
-  rows,
+  rows: allRows,
   keywords,
   stores,
   canEdit,
@@ -209,11 +209,22 @@ export function PesquisaClient({
 
   const markets = useMemo(() => {
     const set = new Set<string>();
-    for (const r of rows) {
+    for (const r of allRows) {
       if (r.market) set.add(r.market);
     }
     return [...set].sort((a, b) => a.localeCompare(b, "pt"));
-  }, [rows]);
+  }, [allRows]);
+
+  const [activityFilter, setActivityFilter] = useState<
+    "" | "active" | "inactive"
+  >("");
+  const rows = useMemo(
+    () =>
+      activityFilter
+        ? allRows.filter((r) => r.activity === activityFilter)
+        : allRows,
+    [allRows, activityFilter],
+  );
 
   return (
     <div className="mx-auto max-w-[1600px] lg:flex lg:items-start lg:gap-6">
@@ -509,9 +520,39 @@ export function PesquisaClient({
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              {rows.length} entrada{rows.length === 1 ? "" : "s"}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                {rows.length} entrada{rows.length === 1 ? "" : "s"}
+              </p>
+              <div className="inline-flex overflow-hidden rounded-lg border border-border text-xs font-medium">
+                {(
+                  [
+                    ["", "Todas"],
+                    ["active", "Ativas"],
+                    ["inactive", "Desativadas"],
+                  ] as const
+                ).map(([k, l], i) => (
+                  <button
+                    key={k || "all"}
+                    type="button"
+                    onClick={() => setActivityFilter(k)}
+                    className={cn(
+                      "px-3 py-1.5 transition-colors",
+                      i > 0 && "border-l border-border",
+                      activityFilter === k
+                        ? k === "active"
+                          ? "bg-positive text-white"
+                          : k === "inactive"
+                            ? "bg-negative text-white"
+                            : "bg-accent text-accent-foreground"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface lg:block">
