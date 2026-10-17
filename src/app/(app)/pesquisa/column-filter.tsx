@@ -124,7 +124,12 @@ export function FilterHeader<T>({
   onChange: (next: ColFilterState | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    maxHeight: number;
+  }>({ left: 0, maxHeight: 400 });
   const [search, setSearch] = useState("");
   const [showCustom, setShowCustom] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -177,10 +182,23 @@ export function FilterHeader<T>({
   function toggleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setPos({
-        top: r.bottom + 6,
-        left: Math.max(8, Math.min(r.left, window.innerWidth - 270)),
-      });
+      const below = window.innerHeight - r.bottom - 14;
+      const above = r.top - 14;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - 270));
+      // Abre para cima se não houver espaço suficiente em baixo.
+      if (below < 340 && above > below) {
+        setPos({
+          bottom: window.innerHeight - r.top + 6,
+          left,
+          maxHeight: Math.max(160, above),
+        });
+      } else {
+        setPos({
+          top: r.bottom + 6,
+          left,
+          maxHeight: Math.max(160, below),
+        });
+      }
       setSearch("");
       setShowCustom(filter?.preset === "custom");
     }
@@ -219,8 +237,14 @@ export function FilterHeader<T>({
       {open && (
         <div
           ref={popRef}
-          style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="z-[60] w-64 rounded-xl border border-border bg-surface p-3 text-left text-sm font-normal text-foreground shadow-lg"
+          style={{
+            position: "fixed",
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            maxHeight: pos.maxHeight,
+          }}
+          className="z-[60] w-64 overflow-y-auto rounded-xl border border-border bg-surface p-3 text-left text-sm font-normal text-foreground shadow-lg"
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold">{def.label}</span>
