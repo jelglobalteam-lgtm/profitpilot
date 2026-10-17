@@ -12,11 +12,13 @@ export function ActivityToggle({
   id,
   value,
   canEdit,
+  compact,
 }: {
   target: "item" | "store";
   id: string;
   value: Activity;
   canEdit: boolean;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -36,8 +38,10 @@ export function ActivityToggle({
     });
   }
 
-  const base =
-    "px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60";
+  const base = cn(
+    "font-medium transition-colors disabled:opacity-60",
+    compact ? "px-1.5 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
+  );
   return (
     <div
       className={cn(
