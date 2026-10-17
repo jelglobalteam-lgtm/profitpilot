@@ -217,7 +217,7 @@ export function StoresSection({
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState("");
   const [status, setStatus] = useState<StoreStatus | "">("");
-  const [activity, setActivity] = useState<ActivityFilterValue>("active");
+  const [activity, setActivity] = useState<ActivityFilterValue>("");
   const [colFilters, setColFilters] = useState<ColFilters>({});
   const setCol = (key: string, f: ColFilters[string] | undefined) =>
     setColFilters((prev) => {

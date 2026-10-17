@@ -273,7 +273,7 @@ export function PesquisaClient({
   }, [allRows]);
 
   const [activityFilter, setActivityFilter] =
-    useState<ActivityFilterValue>("active");
+    useState<ActivityFilterValue>("");
   const [colFilters, setColFilters] = useState<ColFilters>({});
   const setCol = (key: string, f: ColFilters[string] | undefined) =>
     setColFilters((prev) => {
