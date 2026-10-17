@@ -17,6 +17,7 @@ CATEGORIAS: Casacos, Botas
 NICHO: Moda mulher
 ULTIMA_VERIFICACAO: 2026-10-12
 STATUS: Por analisar
+ATIVA: Ativa
 BEST_SELLERS: Casaco X, Bota Y
 NOTAS:
 
@@ -33,11 +34,13 @@ DATA: 2026-10-12
 GENERO: Homem
 ANGULO: Single image
 ESTADO: Novo
+ATIVA: Ativa
 NOTAS:
 
 # Valores aceites
 # TIPO: LOJA | COLECAO | PRODUTO
 # TENDENCIA: A escalar | A baixar | Estável
+# ATIVA (loja e coleção): Ativa | Desativa (vazio = sem estado)
 # STATUS (loja): Por analisar | A acompanhar | Analisada | Descartada
 # GENERO: Mulher | Homem | Unissex
 # ESTADO (coleção/produto): Novo | Shortlist | A testar | Winner | Descartado
@@ -166,6 +169,17 @@ export function parseGender(
   if (/homem|male|masc/.test(s)) return "male";
   if (/unis/.test(s)) return "unisex";
   return "unknown";
+}
+
+export function parseActivity(
+  raw: string | undefined,
+): "active" | "inactive" | "" {
+  const s = norm(raw ?? "");
+  if (!s) return "";
+  if (/^(desativ|inativ|inactiv|nao|no\b|off|false|0)/.test(s))
+    return "inactive";
+  if (/^(ativ|activ|sim|yes|on\b|true|1)/.test(s)) return "active";
+  return "";
 }
 
 export function parseBlockKind(

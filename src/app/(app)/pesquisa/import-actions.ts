@@ -11,6 +11,7 @@ import { CompetitorStore } from "@/models/CompetitorStore";
 import { parseDateInput, startOfDay } from "@/lib/period";
 import {
   normalizeUrl,
+  parseActivity,
   parseBlockKind,
   parseCount,
   parseDateKey,
@@ -106,6 +107,7 @@ export async function importResearchTxtAction(
             dateOrNull(parseDateKey(f.ULTIMA_VERIFICACAO ?? f.LAST_VERIFIED)) ??
             startOfDay(new Date()),
           status: parseStoreStatus(f.STATUS),
+          activity: parseActivity(f.ATIVA ?? f.ATIVO ?? f.ACTIVE),
           niche: (f.NICHO ?? "").slice(0, 120),
           notes: (f.NOTAS ?? f.NOTES ?? "").slice(0, 4000),
           bestSellers: (f.BEST_SELLERS ?? "").slice(0, 2000),
@@ -150,6 +152,7 @@ export async function importResearchTxtAction(
           notes: (f.NOTAS ?? f.NOTES ?? "").slice(0, 4000),
           angle: (f.ANGULO ?? f.ANGLE ?? "").slice(0, 300),
           status: parseItemStatus(f.ESTADO ?? f.STATUS),
+          activity: parseActivity(f.ATIVA ?? f.ATIVO ?? f.ACTIVE),
           createdBy,
         });
       }
