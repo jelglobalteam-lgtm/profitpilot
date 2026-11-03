@@ -10,6 +10,7 @@ import { AdSpendRow } from "@/app/(app)/anuncios/ad-spend-row";
 import { AdAccountsPanel } from "@/components/anuncios/ad-accounts-panel";
 import { GoogleAdsStoreLink } from "@/components/anuncios/google-ads-store-link";
 import { CampaignsPanel } from "@/components/anuncios/campaigns-panel";
+import { ImportAdHistoryButton } from "@/components/anuncios/import-ad-history-button";
 import { LastSyncBadge } from "@/components/last-sync-badge";
 import { PageTabCard, PageTabs } from "@/components/page-tabs";
 import { DeleteAdAccountButton } from "@/components/anuncios/delete-ad-account-button";
@@ -264,6 +265,14 @@ export function AnunciosStoreView({
                 {s.calendar.length} dias desde importação · {s.missingCount} em
                 falta
               </p>
+              {s.canEdit && apiCount > 0 && (
+                <div className="mt-3">
+                  <ImportAdHistoryButton
+                    storeId={s.storeId}
+                    onDone={onDataChanged}
+                  />
+                </div>
+              )}
             </div>
             <div className="overflow-x-auto -mx-4 sm:-mx-5">
               <table className="w-full min-w-[640px] text-sm">
