@@ -35,6 +35,7 @@ export type CompetitorStoreView = {
   priceRange: string;
   mainCategories: string;
   lastVerifiedKey: string;
+  recheckIn: string;
   status: StoreStatus;
   niche: string;
   notes: string;

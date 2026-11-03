@@ -106,6 +106,7 @@ export async function importResearchTxtAction(
           lastVerifiedAt:
             dateOrNull(parseDateKey(f.ULTIMA_VERIFICACAO ?? f.LAST_VERIFIED)) ??
             startOfDay(new Date()),
+          recheckIn: (f.VERIFICAR_DAQUI_A ?? f.VERIFICAR ?? "").slice(0, 80),
           status: parseStoreStatus(f.STATUS),
           activity: parseActivity(f.ATIVA ?? f.ATIVO ?? f.ACTIVE),
           niche: (f.NICHO ?? "").slice(0, 120),

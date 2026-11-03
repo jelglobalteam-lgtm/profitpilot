@@ -90,6 +90,12 @@ const STORE_COLS: ColDef<CompetitorStoreView>[] = [
     get: (r) => r.lastVerifiedKey,
   },
   {
+    key: "recheck",
+    label: "Verificar daqui a",
+    kind: "text",
+    get: (r) => r.recheckIn,
+  },
+  {
     key: "status",
     label: "Status",
     kind: "values",
@@ -129,6 +135,7 @@ type Form = {
   priceRange: string;
   mainCategories: string;
   lastVerifiedAt: string;
+  recheckIn: string;
   status: StoreStatus;
   niche: string;
   notes: string;
@@ -147,6 +154,7 @@ function emptyForm(): Form {
     priceRange: "",
     mainCategories: "",
     lastVerifiedAt: formatDateInput(new Date()),
+    recheckIn: "",
     status: "to_analyze",
     niche: "",
     notes: "",
@@ -167,6 +175,7 @@ function fromRow(r: CompetitorStoreView): Form {
     priceRange: r.priceRange,
     mainCategories: r.mainCategories,
     lastVerifiedAt: r.lastVerifiedKey,
+    recheckIn: r.recheckIn,
     status: r.status,
     niche: r.niche,
     notes: r.notes,
@@ -458,6 +467,15 @@ export function StoresSection({
                 />
               </div>
               <div>
+                <label className={labelCls}>Verificar daqui a</label>
+                <input
+                  className={inputCls}
+                  placeholder="verificar daqui a 2 semanas"
+                  value={form.recheckIn}
+                  onChange={(e) => patch({ recheckIn: e.target.value })}
+                />
+              </div>
+              <div>
                 <label className={labelCls}>Status</label>
                 <select
                   className={inputCls}
@@ -571,6 +589,7 @@ export function StoresSection({
               <th className="px-2 py-2.5">{colHeader("categories")}</th>
               <th className="px-2 py-2.5">{colHeader("niche")}</th>
               <th className="px-2 py-2.5">{colHeader("verified")}</th>
+              <th className="px-2 py-2.5">{colHeader("recheck")}</th>
               <th className="px-2 py-2.5">{colHeader("status")}</th>
               <th className="px-2 py-2.5">{colHeader("activity")}</th>
               <th className="px-2 py-2.5">{colHeader("best")}</th>
@@ -582,7 +601,7 @@ export function StoresSection({
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={canEdit ? 15 : 14}
+                  colSpan={canEdit ? 16 : 15}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   Sem lojas para estes filtros.
@@ -711,6 +730,16 @@ export function StoresSection({
                     display={
                       r.lastVerifiedKey ? shortDate(r.lastVerifiedKey) : "—"
                     }
+                    canEdit={canEdit}
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <EditableCell
+                    target="store"
+                    id={r.id}
+                    field="recheckIn"
+                    type="text"
+                    raw={r.recheckIn}
                     canEdit={canEdit}
                   />
                 </td>

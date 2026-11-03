@@ -47,6 +47,7 @@ const STORE_FIELDS: Record<string, FieldDef> = {
   productCount: { type: "int" },
   activeAds: { type: "int" },
   lastVerifiedAt: { type: "date" },
+  recheckIn: { type: "text", max: 80 },
   trend: { type: "enum", options: ["", "up", "down", "flat"] },
   status: {
     type: "enum",

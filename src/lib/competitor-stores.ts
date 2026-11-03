@@ -47,6 +47,7 @@ export async function listCompetitorStores(
     activeAds: d.activeAds ?? null,
     priceRange: d.priceRange ?? "",
     mainCategories: d.mainCategories ?? "",
+    recheckIn: d.recheckIn ?? "",
     lastVerifiedKey: d.lastVerifiedAt ? formatDateInput(d.lastVerifiedAt) : "",
     status: (d.status ?? "to_analyze") as StoreStatus,
     niche: d.niche ?? "",

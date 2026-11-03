@@ -24,6 +24,8 @@ const CompetitorStoreSchema = new Schema(
     priceRange: { type: String, trim: true, default: "" },
     mainCategories: { type: String, trim: true, default: "" },
     lastVerifiedAt: { type: Date, default: null },
+    /** Texto livre: "verificar daqui a 2 semanas". */
+    recheckIn: { type: String, trim: true, default: "" },
     status: {
       type: String,
       enum: ["to_analyze", "monitoring", "analyzed", "discarded"],

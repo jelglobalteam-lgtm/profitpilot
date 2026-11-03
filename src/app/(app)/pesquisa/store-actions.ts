@@ -41,6 +41,7 @@ const schema = z.object({
   priceRange: z.string().trim().max(80).default(""),
   mainCategories: z.string().trim().max(300).default(""),
   lastVerifiedAt: z.string().trim().nullable().optional(),
+  recheckIn: z.string().trim().max(80).default(""),
   status: z
     .enum(["to_analyze", "monitoring", "analyzed", "discarded"])
     .default("to_analyze"),
@@ -83,6 +84,7 @@ function toFields(d: z.output<typeof schema>) {
     priceRange: d.priceRange,
     mainCategories: d.mainCategories,
     lastVerifiedAt,
+    recheckIn: d.recheckIn,
     status: d.status,
     niche: d.niche,
     notes: d.notes,
