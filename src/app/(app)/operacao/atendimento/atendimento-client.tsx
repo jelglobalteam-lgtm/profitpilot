@@ -88,9 +88,10 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
 
 /* ---------------------------------- Casos --------------------------------- */
 
-type CaseGroup = CsStatus | "aprovado" | "rejeitado";
+type CaseGroup = CsStatus | "aprovado" | "rejeitado" | "pendente";
 
 const GROUPS: { key: CaseGroup; label: string }[] = [
+  { key: "pendente", label: "Pendentes de si" },
   { key: "para_aprovar", label: CS_STATUS_LABEL.para_aprovar },
   { key: "aprovado", label: "Aprovados, a enviar" },
   { key: "rejeitado", label: "Rejeitados, a rever" },
@@ -106,19 +107,28 @@ function groupOf(c: CsCaseView): CaseGroup {
   return c.status;
 }
 
+/** Casos que esperam uma decisão do Emanuel: para aprovar, escalados e reembolsos. */
+function isPending(c: CsCaseView): boolean {
+  const g = groupOf(c);
+  return g === "para_aprovar" || g === "escalar" || g === "reembolso";
+}
+
 function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean }) {
-  const [status, setStatus] = useState<CaseGroup>("para_aprovar");
+  const [status, setStatus] = useState<CaseGroup>("pendente");
   const [store, setStore] = useState<CsStoreKey | "all">("all");
   const [selected, setSelected] = useState<string | null>(null);
 
   const counts = useMemo(() => {
     const m = new Map<CaseGroup, number>();
-    for (const c of cases) m.set(groupOf(c), (m.get(groupOf(c)) ?? 0) + 1);
+    for (const c of cases) {
+      m.set(groupOf(c), (m.get(groupOf(c)) ?? 0) + 1);
+      if (isPending(c)) m.set("pendente", (m.get("pendente") ?? 0) + 1);
+    }
     return m;
   }, [cases]);
 
   const list = cases.filter(
-    (c) => groupOf(c) === status && (store === "all" || c.store === store),
+    (c) => (status === "pendente" ? isPending(c) : groupOf(c) === status) && (store === "all" || c.store === store),
   );
   const current = cases.find((c) => c.id === selected) ?? null;
 
