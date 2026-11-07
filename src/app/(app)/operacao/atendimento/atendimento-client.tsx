@@ -88,26 +88,44 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
 
 /* ---------------------------------- Casos --------------------------------- */
 
+type CaseGroup = CsStatus | "aprovado" | "rejeitado";
+
+const GROUPS: { key: CaseGroup; label: string }[] = [
+  { key: "para_aprovar", label: CS_STATUS_LABEL.para_aprovar },
+  { key: "aprovado", label: "Aprovados, a enviar" },
+  { key: "rejeitado", label: "Rejeitados, a rever" },
+  ...CS_STATUSES.filter((s) => s !== "para_aprovar").map((s) => ({ key: s as CaseGroup, label: CS_STATUS_LABEL[s] })),
+];
+
+/** Um caso com decisão do Emanuel mas ainda por tratar deixa de contar como "para aprovar". */
+function groupOf(c: CsCaseView): CaseGroup {
+  if (c.status === "para_aprovar" && (c.decision === "aprovado" || c.decision === "aprovado_com_edicao")) {
+    return "aprovado";
+  }
+  if (c.status === "para_aprovar" && c.decision === "rejeitado") return "rejeitado";
+  return c.status;
+}
+
 function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean }) {
-  const [status, setStatus] = useState<CsStatus>("para_aprovar");
+  const [status, setStatus] = useState<CaseGroup>("para_aprovar");
   const [store, setStore] = useState<CsStoreKey | "all">("all");
   const [selected, setSelected] = useState<string | null>(null);
 
   const counts = useMemo(() => {
-    const m = new Map<CsStatus, number>();
-    for (const c of cases) m.set(c.status, (m.get(c.status) ?? 0) + 1);
+    const m = new Map<CaseGroup, number>();
+    for (const c of cases) m.set(groupOf(c), (m.get(groupOf(c)) ?? 0) + 1);
     return m;
   }, [cases]);
 
   const list = cases.filter(
-    (c) => c.status === status && (store === "all" || c.store === store),
+    (c) => groupOf(c) === status && (store === "all" || c.store === store),
   );
   const current = cases.find((c) => c.id === selected) ?? null;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {CS_STATUSES.map((s) => (
+        {GROUPS.map(({ key: s, label }) => (
           <button
             key={s}
             type="button"
@@ -122,7 +140,7 @@ function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean })
                 : "border-border text-muted-foreground hover:bg-muted",
             )}
           >
-            {CS_STATUS_LABEL[s]} <span className="tabular-nums">({counts.get(s) ?? 0})</span>
+            {label} <span className="tabular-nums">({counts.get(s) ?? 0})</span>
           </button>
         ))}
       </div>
