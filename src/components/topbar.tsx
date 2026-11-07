@@ -5,6 +5,7 @@ import { WorkspaceSelector } from "@/components/workspace-selector";
 import { PortfolioScopeSelector } from "@/components/portfolio-scope-selector";
 import { TopbarPeriodSelector } from "@/components/topbar-period";
 import { TopbarMoreMenu } from "@/components/topbar-more-menu";
+import { AppViewModeToggle } from "@/components/app-view-mode-toggle";
 import type { CurrentUser, UserWorkspace } from "@/lib/auth";
 
 export function Topbar({
@@ -67,6 +68,8 @@ export function Topbar({
           <TopbarMoreMenu user={user} />
         </div>
 
+        <AppViewModeToggle className="flex w-full [&>button]:flex-1" />
+
         <TopbarPeriodSelector className="min-w-0 w-full" fullWidth />
       </div>
 
@@ -86,6 +89,7 @@ export function Topbar({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <AppViewModeToggle compact />
           <Suspense
             fallback={
               <div className="h-9 w-36 rounded-lg border border-border bg-muted" />

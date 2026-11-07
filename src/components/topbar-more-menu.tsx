@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { LogOut, MoreHorizontal } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PrivacyToggle } from "@/components/privacy-mode";
-import { AppViewModeToggle } from "@/components/app-view-mode-toggle";
 import { logoutAction } from "@/app/(app)/actions";
 import type { CurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -73,13 +72,6 @@ export function TopbarMoreMenu({
                 {user.email || (user.username ? `@${user.username}` : null)}
               </p>
             </div>
-          </div>
-
-          <div className="space-y-2 border-b border-border px-3 py-2.5">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
-              Vista
-            </p>
-            <AppViewModeToggle className="flex w-full [&>button]:flex-1" />
           </div>
 
           <div className="flex items-center justify-between gap-2 px-3 py-2">
