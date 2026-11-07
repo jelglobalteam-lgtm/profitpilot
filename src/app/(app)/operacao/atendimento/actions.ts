@@ -78,6 +78,32 @@ export async function decideCsCaseAction(
   return { ok: true };
 }
 
+const closeSchema = z.object({ caseId: z.string().min(1) });
+
+/** Marca como tratado um caso escalado ou de reembolso, depois de o Emanuel o resolver. */
+export async function closeCsCaseAction(input: z.infer<typeof closeSchema>): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  const p = closeSchema.safeParse(input);
+  if (!p.success || !oid(p.data.caseId)) return { error: "Dados inválidos." };
+  await connectToDatabase();
+  const wid = new mongoose.Types.ObjectId(user.workspaceId);
+  const c = await CsCase.findOneAndUpdate(
+    { _id: p.data.caseId, workspaceId: wid },
+    { $set: { status: "resolvido" } },
+  );
+  if (!c) return { error: "Caso não encontrado." };
+  await CsEvent.create({
+    workspaceId: wid,
+    caseId: c._id,
+    type: "concluido",
+    note: "",
+    actorId: new mongoose.Types.ObjectId(user.id),
+  });
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}
+
 const noteSchema = z.object({ caseId: z.string().min(1), note: z.string().max(4000) });
 
 export async function saveCsNoteAction(input: z.infer<typeof noteSchema>): Promise<Result> {

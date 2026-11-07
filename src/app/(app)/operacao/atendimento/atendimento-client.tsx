@@ -21,8 +21,8 @@ import type { CsData } from "@/lib/cs-data";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
   addCsMiaMessageAction,
+  closeCsCaseAction,
   decideCsCaseAction,
-  saveCsNoteAction,
   saveCsTemplateAction,
   setCsMiaStatusAction,
   setCsTemplateAutoAction,
@@ -196,7 +196,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
   const { run, pending, error } = useRun();
-  const [note, setNote] = useState(c.managerNote);
+  const [dialog, setDialog] = useState<"rejeitado" | "escalado" | null>(null);
+  const [reason, setReason] = useState("");
   const [reply, setReply] = useState(c.proposedReply);
   const edited = reply !== c.proposedReply;
   const refundLocked = c.status === "reembolso" || c.classification === "vermelho";
@@ -251,17 +252,6 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
         </div>
       </details>
 
-      <div>
-        <p className="text-[13px] font-medium text-muted-foreground">Nota do Emanuel</p>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          disabled={!canEdit}
-          rows={3}
-          className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm"
-        />
-      </div>
-
       {refundLocked && (
         <p className="text-xs text-warning">
           Reembolsos e casos vermelhos são sempre decididos por si. Aprovar regista a decisão, não executa nada.
@@ -282,7 +272,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
                 decideCsCaseAction({
                   caseId: c.id,
                   decision: edited ? "aprovado_com_edicao" : "aprovado",
-                  note,
+                  note: c.managerNote,
                   editedReply: edited ? reply : undefined,
                 }),
               )
@@ -294,7 +284,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => decideCsCaseAction({ caseId: c.id, decision: "rejeitado", note }))}
+            onClick={() => setDialog("rejeitado")}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             Rejeitar
@@ -302,19 +292,68 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => decideCsCaseAction({ caseId: c.id, decision: "escalado", note }))}
+            onClick={() => setDialog("escalado")}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             Escalar
           </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => saveCsNoteAction({ caseId: c.id, note }))}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
-          >
-            Guardar nota
-          </button>
+          {(c.status === "escalar" || c.status === "reembolso") && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => closeCsCaseAction({ caseId: c.id }))}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            >
+              Marcar como tratado
+            </button>
+          )}
+        </div>
+      )}
+      {dialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md space-y-3 rounded-lg border border-border bg-surface p-4">
+            <h3 className="text-base font-semibold">
+              {dialog === "rejeitado" ? "Porque rejeita esta resposta?" : "Porque escala este caso?"}
+            </h3>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              autoFocus
+              placeholder={
+                dialog === "rejeitado"
+                  ? "Diga o que mudar, por exemplo: oferecer 30%."
+                  : "Diga o que precisa de decidir."
+              }
+              className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDialog(null);
+                  setReason("");
+                }}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={pending || !reason.trim()}
+                onClick={() => {
+                  const decision = dialog;
+                  const note = reason.trim();
+                  setDialog(null);
+                  setReason("");
+                  run(() => decideCsCaseAction({ caseId: c.id, decision, note }));
+                }}
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
+              >
+                {dialog === "rejeitado" ? "Rejeitar" : "Escalar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
