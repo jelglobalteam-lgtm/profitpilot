@@ -23,6 +23,7 @@ import {
   Tags,
   Target,
   Search,
+  Headset,
   type LucideIcon,
 } from "lucide-react";
 import type { AppViewMode } from "@/lib/app-view-mode";
@@ -75,6 +76,7 @@ export const operationsNavItems: NavItem[] = [
   { label: "Hoje", href: "/operacao", icon: Kanban },
   { label: "Tarefas", href: "/operacao/tarefas", icon: ListTodo },
   { label: "Coleções", href: "/operacao/colecoes", icon: Layers },
+  { label: "Atendimento", href: "/operacao/atendimento", icon: Headset },
   { label: "Produtos teste", href: "/operacao/produtos", icon: FlaskConical },
   { label: "Pesquisa PR", href: "/pesquisa", icon: Search },
   { label: "Lojas", href: "/lojas", icon: Store },
