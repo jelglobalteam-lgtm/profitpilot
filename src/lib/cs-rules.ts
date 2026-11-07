@@ -21,7 +21,7 @@ export const CS_RULES = {
   riscoDisputaDia: 8,
   /** Pergunta/pedido a Mia sem resposta: seguir passadas N horas; escalar passadas N horas. */
   miaSeguirH: 24,
-  miaEscalarH: 72,
+  miaEscalarH: 48,
   /** Rascunho para a Mia por enviar. */
   miaRascunhoH: 4,
 } as const;
