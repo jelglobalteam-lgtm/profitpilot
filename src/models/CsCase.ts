@@ -38,6 +38,7 @@ const CsCaseSchema = new Schema(
     language: { type: String, default: "PT" },
     orderNumber: { type: String, default: "", index: true },
     items: { type: String, default: "" },
+    complaintReason: { type: String, default: "" },
     orderValue: { type: String, default: "" },
     trackingStatus: { type: String, default: "" },
     timeline: { type: [TimelineSchema], default: [] },

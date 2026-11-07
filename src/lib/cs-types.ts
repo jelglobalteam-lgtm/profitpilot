@@ -90,6 +90,7 @@ export type CsCaseView = {
   language: string;
   orderNumber: string;
   items: string;
+  complaintReason: string;
   orderValue: string;
   trackingStatus: string;
   timeline: CsTimelineEntry[];

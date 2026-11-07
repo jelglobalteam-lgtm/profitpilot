@@ -31,6 +31,7 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     language: d.language ?? "PT",
     orderNumber: d.orderNumber ?? "",
     items: d.items ?? "",
+    complaintReason: d.complaintReason ?? "",
     orderValue: d.orderValue ?? "",
     trackingStatus: d.trackingStatus ?? "",
     timeline: (d.timeline ?? []).map((t) => ({

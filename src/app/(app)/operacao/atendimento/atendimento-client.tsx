@@ -71,6 +71,7 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
           { id: "casos", label: "Casos", badge: open.length || undefined },
           { id: "templates", label: "Templates" },
           { id: "mia", label: "Mia" },
+          { id: "produtos", label: "Produtos" },
           { id: "prazos", label: "Prazos e alertas", badge: alerts.length || undefined },
           { id: "geral", label: "Visão geral" },
         ]}
@@ -78,6 +79,7 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
       {tab === "casos" && <CasesTab cases={data.cases} canEdit={canEdit} />}
       {tab === "templates" && <TemplatesTab templates={data.templates} canEdit={canEdit} />}
       {tab === "mia" && <MiaTab messages={data.mia} canEdit={canEdit} />}
+      {tab === "produtos" && <ProductsTab cases={data.cases} />}
       {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
       {tab === "geral" && <OverviewTab cases={data.cases} />}
     </div>
@@ -612,6 +614,79 @@ function DeadlinesTab({ alerts }: { alerts: ReturnType<typeof computeCsAlerts> }
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+
+/* -------------------------------- Produtos -------------------------------- */
+
+const COMPLAINT_TYPES = new Set(["qualidade", "troca_tamanho", "devolucao", "reembolso", "disputa"]);
+
+function productName(items: string): string {
+  return items.split(",")[0].trim() || "Sem produto";
+}
+
+function ProductsTab({ cases }: { cases: CsCaseView[] }) {
+  const rows = useMemo(() => {
+    const map = new Map<string, { total: number; week: number; reasons: Map<string, number> }>();
+    for (const c of cases) {
+      if (!COMPLAINT_TYPES.has(c.issueType)) continue;
+      const name = productName(c.items);
+      const row = map.get(name) ?? { total: 0, week: 0, reasons: new Map() };
+      row.total += 1;
+      if (c.ageDays <= 7) row.week += 1;
+      const reason = c.complaintReason.trim() || CS_ISSUE_LABEL[c.issueType];
+      row.reasons.set(reason, (row.reasons.get(reason) ?? 0) + 1);
+      map.set(name, row);
+    }
+    return [...map.entries()]
+      .map(([name, r]) => ({
+        name,
+        total: r.total,
+        week: r.week,
+        reasons: [...r.reasons.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t),
+      }))
+      .sort((a, b) => b.total - a.total || b.week - a.week);
+  }, [cases]);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Produtos com mais reclamações (qualidade, tamanho, devolução, reembolso e disputa). 3 ou mais numa semana
+        marcam o produto como de risco, para avisar a cadeia de abastecimento.
+      </p>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Ainda não há reclamações registadas.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          <table className="w-full text-sm">
+            <thead className="text-left text-[13px] text-muted-foreground">
+              <tr>
+                <th className="p-3">#</th>
+                <th className="p-3">Produto</th>
+                <th className="p-3">Reclamações</th>
+                <th className="p-3">Últimos 7 dias</th>
+                <th className="p-3">Porque reclamam</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.name} className="border-t border-border align-top">
+                  <td className="p-3">{i + 1}</td>
+                  <td className="p-3 font-medium">
+                    {r.name}
+                    {r.week >= 3 && <span className="ml-2 text-xs text-negative">Produto de risco</span>}
+                  </td>
+                  <td className="p-3">{r.total}</td>
+                  <td className="p-3">{r.week}</td>
+                  <td className="p-3">{r.reasons.slice(0, 3).join("; ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
