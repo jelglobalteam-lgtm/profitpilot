@@ -210,40 +210,46 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           {CS_STORE_LABEL[c.store]} · {c.language}
         </span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Email">{c.customerEmail}</Field>
-        <Field label="Encomenda">{c.orderNumber}</Field>
-        <Field label="Artigos">{c.items}</Field>
-        <Field label="Valor">{c.orderValue}</Field>
-        <Field label="Estado e rastreio">{c.trackingStatus}</Field>
-        <Field label="Template">{c.templateLabel}</Field>
-      </div>
-      <Field label="Cronologia">
-        {c.timeline.length
-          ? c.timeline.map((t) => `${t.n}.º email: ${t.summary}`).join("\n")
-          : ""}
-      </Field>
-      <Field label="Ofertas feitas e recusadas">{c.offered}</Field>
-      <Field label="O que o cliente pede agora">{c.requests}</Field>
+      <p className="text-sm text-muted-foreground">
+        {c.orderNumber} · {c.items}
+      </p>
       <Field label="Último email do cliente (PT)">{c.lastCustomerEmailPt}</Field>
-      <details className="text-sm">
-        <summary className="cursor-pointer text-muted-foreground">Original ({c.language})</summary>
-        <p className="mt-1 whitespace-pre-wrap">{c.lastCustomerEmailOriginal}</p>
-      </details>
+      <Field label="Resposta proposta (PT)">{c.proposedReplyPt}</Field>
 
-      <div>
-        <p className="text-[13px] font-medium text-muted-foreground">
-          Resposta proposta ({c.language})
-        </p>
-        <textarea
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          disabled={!canEdit}
-          rows={7}
-          className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm"
-        />
-      </div>
-      <Field label="Tradução PT">{c.proposedReplyPt}</Field>
+      <details className="rounded-lg border border-border p-3 text-sm">
+        <summary className="cursor-pointer font-medium text-muted-foreground">Ver mais</summary>
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Email">{c.customerEmail}</Field>
+            <Field label="Valor">{c.orderValue}</Field>
+            <Field label="Estado e rastreio">{c.trackingStatus}</Field>
+            <Field label="Template">{c.templateLabel}</Field>
+          </div>
+          <Field label="Cronologia">
+            {c.timeline.length
+              ? c.timeline.map((t) => `${t.n}.º email: ${t.summary}`).join("\n\n")
+              : ""}
+          </Field>
+          <Field label="Ofertas feitas e recusadas">{c.offered}</Field>
+          <Field label="O que o cliente pede agora">{c.requests}</Field>
+          <div>
+            <p className="text-[13px] font-medium text-muted-foreground">Email original ({c.language})</p>
+            <p className="mt-1 whitespace-pre-wrap">{c.lastCustomerEmailOriginal}</p>
+          </div>
+          <div>
+            <p className="text-[13px] font-medium text-muted-foreground">
+              Resposta proposta ({c.language}), editável
+            </p>
+            <textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              disabled={!canEdit}
+              rows={8}
+              className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm"
+            />
+          </div>
+        </div>
+      </details>
 
       <div>
         <p className="text-[13px] font-medium text-muted-foreground">Nota do Emanuel</p>
