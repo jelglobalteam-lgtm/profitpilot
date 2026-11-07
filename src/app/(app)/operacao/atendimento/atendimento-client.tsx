@@ -586,7 +586,7 @@ function DeadlinesTab({ alerts }: { alerts: ReturnType<typeof computeCsAlerts> }
         <p className="text-sm font-semibold">Regras de seguimento</p>
         <ul className="mt-2 space-y-1 text-sm">
           <li>Resposta ao cliente: ideal {R.respostaIdealH} h, limite {R.respostaLimiteH} h.</li>
-          <li>Ciclo de emails: dias {R.recontactoDias.join(", ")}; ao dia {R.propostaReembolsoDia} propõe-se reembolso (decide o Emanuel).</li>
+          <li>Ciclo de emails: dias {R.recontactoDias.join(", ")}; ao dia {R.propostaReembolsoDia} prepara-se o reembolso e ao dia {R.reembolsoAgoraDia} reembolsa-se agora (decide o Emanuel).</li>
           <li>Mia: seguir após {R.miaSeguirH} h sem resposta; escalar ao Emanuel após {R.miaEscalarH} h.</li>
           <li>Reembolsos e escalados parados mais de {R.decisaoEmanuelH} h aparecem como críticos.</li>
           <li>Casos abertos há {R.riscoDisputaDia} dias ou mais têm risco de disputa.</li>

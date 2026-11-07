@@ -13,8 +13,10 @@ export const CS_RULES = {
   decisaoEmanuelH: 24,
   /** Seguimento com o cliente (dias desde a abertura do caso): 2o, 3o email, decisao. */
   recontactoDias: [2, 5, 7] as const,
-  /** Dia em que, sem solucao, se propoe reembolso (decide o Emanuel). */
+  /** Dia em que, sem solucao, se prepara o reembolso (decide o Emanuel). */
   propostaReembolsoDia: 8,
+  /** Dia do "reembolsar agora" sem resposta (sistema do curso). */
+  reembolsoAgoraDia: 10,
   /** Risco de disputa/chargeback para encomendas abertas ha mais de N dias. */
   riscoDisputaDia: 8,
   /** Pergunta/pedido a Mia sem resposta: seguir passadas N horas; escalar passadas N horas. */
@@ -48,8 +50,8 @@ export const CS_PHASES: { fase: string; prazo: string; acao: string }[] = [
   },
   {
     fase: "Reembolso",
-    prazo: "Dia 8 sem solucao (dia 10 por omissao no FirstView)",
-    acao: "Decide sempre o Emanuel. RTS ou recusado: deducao de 15 por cento. Se o tracking mostra pronto para levantar, nao reembolsar.",
+    prazo: "Dia 8 sem solucao: preparar. Dia 10 sem resposta: reembolsar agora",
+    acao: "Decide e executa sempre o Emanuel. RTS ou recusado: deducao de 15 por cento. Se ao dia 8 o tracking mostra pronto para levantar, nao reembolsar.",
   },
   {
     fase: "Disputa PayPal e chargeback",
@@ -139,15 +141,25 @@ export function computeCsAlerts(
 
     if (c.status === "a_aguardar_cliente") {
       const day = Math.floor(sinceOpenH / 24);
-      if (day >= R.propostaReembolsoDia) {
+      if (day >= R.reembolsoAgoraDia) {
         out.push({
           id: `${c.id}:cliente`,
           level: "critico",
           kind: "caso",
           refId: c.id,
+          title: `${label}: dia ${day} sem resposta`,
+          detail: "Passou o limite do ciclo: reembolsar agora.",
+          action: "Emanuel decide e executa o reembolso.",
+        });
+      } else if (day >= R.propostaReembolsoDia) {
+        out.push({
+          id: `${c.id}:cliente`,
+          level: "aviso",
+          kind: "caso",
+          refId: c.id,
           title: `${label}: dia ${day} sem solucao`,
           detail: "Fim do ciclo de 3 emails em 8 dias.",
-          action: "Propor reembolso ao Emanuel (so ele decide).",
+          action: "Preparar o reembolso para o Emanuel decidir.",
         });
       } else if (R.recontactoDias.some((d) => day >= d) && sinceUpdateH > 24) {
         out.push({
