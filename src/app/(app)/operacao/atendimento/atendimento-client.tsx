@@ -18,6 +18,7 @@ import {
   type CsTemplateView,
 } from "@/lib/cs-types";
 import type { CsData } from "@/lib/cs-data";
+import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
   addCsMiaMessageAction,
   decideCsCaseAction,
@@ -59,6 +60,7 @@ function useRun() {
 export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: boolean }) {
   const [tab, setTab] = useState("casos");
   const open = data.cases.filter((c) => c.status !== "resolvido" && c.status !== "respondido");
+  const alerts = useMemo(() => computeCsAlerts(data.cases, data.mia), [data.cases, data.mia]);
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">Atendimento</h1>
@@ -69,12 +71,14 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
           { id: "casos", label: "Casos", badge: open.length || undefined },
           { id: "templates", label: "Templates" },
           { id: "mia", label: "Mia" },
+          { id: "prazos", label: "Prazos e alertas", badge: alerts.length || undefined },
           { id: "geral", label: "Visão geral" },
         ]}
       />
       {tab === "casos" && <CasesTab cases={data.cases} canEdit={canEdit} />}
       {tab === "templates" && <TemplatesTab templates={data.templates} canEdit={canEdit} />}
       {tab === "mia" && <MiaTab messages={data.mia} canEdit={canEdit} />}
+      {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
       {tab === "geral" && <OverviewTab cases={data.cases} />}
     </div>
   );
@@ -535,6 +539,78 @@ function OverviewTab({ cases }: { cases: CsCaseView[] }) {
           ))}
           {byType.size === 0 && <li className="text-muted-foreground">Sem dados ainda.</li>}
         </ul>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- Prazos e alertas ---------------------------- */
+
+const ALERT_LABEL: Record<CsAlertLevel, string> = {
+  critico: "Crítico",
+  aviso: "Aviso",
+  info: "Info",
+};
+const ALERT_CLASS: Record<CsAlertLevel, string> = {
+  critico: "text-negative",
+  aviso: "text-warning",
+  info: "text-muted-foreground",
+};
+
+function DeadlinesTab({ alerts }: { alerts: ReturnType<typeof computeCsAlerts> }) {
+  const R = CS_RULES;
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <p className="text-sm font-semibold">Alertas ({alerts.length})</p>
+        {alerts.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">Sem encomendas em atraso nem respostas pendentes.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-border">
+            {alerts.map((a) => (
+              <li key={a.id} className="flex flex-col gap-0.5 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-xs font-semibold uppercase", ALERT_CLASS[a.level])}>
+                    {ALERT_LABEL[a.level]}
+                  </span>
+                  <span className="font-medium">{a.title}</span>
+                </div>
+                <p className="text-muted-foreground">{a.detail}</p>
+                <p>{a.action}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <p className="text-sm font-semibold">Regras de seguimento</p>
+        <ul className="mt-2 space-y-1 text-sm">
+          <li>Resposta ao cliente: ideal {R.respostaIdealH} h, limite {R.respostaLimiteH} h.</li>
+          <li>Ciclo de emails: dias {R.recontactoDias.join(", ")}; ao dia {R.propostaReembolsoDia} propõe-se reembolso (decide o Emanuel).</li>
+          <li>Mia: seguir após {R.miaSeguirH} h sem resposta; escalar ao Emanuel após {R.miaEscalarH} h.</li>
+          <li>Reembolsos e escalados parados mais de {R.decisaoEmanuelH} h aparecem como críticos.</li>
+          <li>Casos abertos há {R.riscoDisputaDia} dias ou mais têm risco de disputa.</li>
+        </ul>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-border text-[13px] text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2 font-medium">Fase</th>
+              <th className="px-4 py-2 font-medium">Prazo</th>
+              <th className="px-4 py-2 font-medium">O que fazer</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {CS_PHASES.map((p) => (
+              <tr key={p.fase} className="align-top">
+                <td className="px-4 py-2 font-medium">{p.fase}</td>
+                <td className="px-4 py-2">{p.prazo}</td>
+                <td className="px-4 py-2">{p.acao}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
