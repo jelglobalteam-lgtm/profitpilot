@@ -69,7 +69,7 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
         onChange={setTab}
         tabs={[
           { id: "casos", label: "Casos", badge: open.length || undefined },
-          { id: "templates", label: "Templates" },
+          { id: "templates", label: "Templates", badge: data.templates.filter((t) => t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual).length || undefined },
           { id: "mia", label: "Mia" },
           { id: "produtos", label: "Produtos" },
           { id: "prazos", label: "Prazos e alertas", badge: alerts.length || undefined },
@@ -390,12 +390,16 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
 
 /* -------------------------------- Templates -------------------------------- */
 
+/** Aprovações seguidas sem edição necessárias para um template poder seguir sem aprovação. */
+const AUTONOMY_THRESHOLD = 20;
+
 function TemplatesTab({ templates, canEdit }: { templates: CsTemplateView[]; canEdit: boolean }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Por defeito, todos os templates exigem a sua aprovação. Só passam a seguir sozinhos depois de os marcar,
-        e os contadores mostram se o template está bem estruturado ou foi um caso isolado.
+        Por defeito, todos os templates exigem a sua aprovação. Com {AUTONOMY_THRESHOLD} aprovações sem edição,
+        o template fica pronto para autonomia e o botão pisca; só passa a seguir sozinho quando o ativar. Os que
+        seguem sozinhos mostram o aviso «Envio automático ativo».
       </p>
       {templates.map((t) => (
         <TemplateRow key={t.id} t={t} canEdit={canEdit} />
@@ -408,7 +412,7 @@ function TemplateRow({ t, canEdit }: { t: CsTemplateView; canEdit: boolean }) {
   const { run, pending, error } = useRun();
   const [label, setLabel] = useState(t.label);
   const [body, setBody] = useState(t.body);
-  const total = t.approvedClean + t.approvedEdited;
+  const eligible = t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual;
   const dirty = label !== t.label || body !== t.body;
 
   return (
@@ -424,8 +428,23 @@ function TemplateRow({ t, canEdit }: { t: CsTemplateView; canEdit: boolean }) {
         <Pill tone={t.classification}>{t.classification}</Pill>
         <span className="text-xs tabular-nums text-muted-foreground">
           {t.approvedClean} sem edição · {t.approvedEdited} editado{t.approvedEdited === 1 ? "" : "s"}
-          {total >= 5 && t.approvedEdited === 0 ? " · pronto para autonomia" : ""}
+          {" "}de {AUTONOMY_THRESHOLD} necessárias
         </span>
+        {t.autoSend && !t.alwaysManual && (
+          <span className="animate-pulse rounded-md bg-positive/15 px-2 py-1 text-xs font-medium text-positive">
+            Envio automático ativo
+          </span>
+        )}
+        {eligible && canEdit && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => setCsTemplateAutoAction({ templateId: t.id, autoSend: true }))}
+            className="animate-pulse rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground disabled:opacity-50"
+          >
+            Pronto: ativar envio automático
+          </button>
+        )}
         <label className="flex items-center gap-1.5 text-sm">
           <input
             type="checkbox"
