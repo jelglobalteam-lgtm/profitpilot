@@ -24,3 +24,15 @@ test("mensagem à Mia não indica desconto", () => {
   assert.match(m, /reached 30 units sold/);
   assert.doesNotMatch(m, /discount|%|target/i);
 });
+
+import { missingInvoiceAlerts } from "../src/lib/cs-invoices.ts";
+
+test("avisos de faturas por importar", () => {
+  const now = Date.parse("2026-11-08T00:00:00Z");
+  const base = { id: "1", number: "A", dueDate: null, currency: "EUR", amount: 5, paid: true, quantity: null, orderFrom: null, orderTo: null, miaBalance: null, periodFrom: null, periodTo: null, lines: [], notes: "", appSpend: null };
+  const mia = { ...base, kind: "mia_imposto" as const, issueDate: "2026-11-07T00:00:00Z" };
+  const g = { ...base, kind: "agencia_google" as const, issueDate: "2026-11-05T00:00:00Z" };
+  assert.equal(missingInvoiceAlerts([mia, g], now).length, 0);
+  assert.equal(missingInvoiceAlerts([{ ...mia, issueDate: "2026-11-01T00:00:00Z" }, g], now).length, 1);
+  assert.equal(missingInvoiceAlerts([], now).length, 2);
+});

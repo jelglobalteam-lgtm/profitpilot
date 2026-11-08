@@ -100,3 +100,29 @@ export async function confirmQuoteInvoiceAction(input: z.infer<typeof confirmSch
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
+
+const observedSchema = z.object({
+  productId: z.string().min(1),
+  title: z.string().max(300).default(""),
+  price: z.number().min(0),
+  source: z.string().max(60).default("manual"),
+});
+
+/** Regista o preço visto no PrimeFlow ou numa fatura, para detetar alterações feitas pela Mia sem aviso. */
+export async function recordObservedPriceAction(input: z.input<typeof observedSchema>): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  const p = observedSchema.safeParse(input);
+  if (!p.success) return { error: "Dados inválidos." };
+  await connectToDatabase();
+  await CsQuote.updateOne(
+    { workspaceId: new mongoose.Types.ObjectId(user.workspaceId), productId: p.data.productId },
+    {
+      $setOnInsert: { title: p.data.title },
+      $push: { observed: { price: p.data.price, at: new Date(), source: p.data.source } },
+    },
+    { upsert: true },
+  );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}

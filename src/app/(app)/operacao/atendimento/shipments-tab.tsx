@@ -58,7 +58,7 @@ export function ShipmentsTab({ shipments, canEdit }: { shipments: ShipmentView[]
             type="button"
             disabled={pending}
             onClick={() => input.current?.click()}
-            className="rounded-md bg-foreground px-3 py-1.5 text-sm text-background disabled:opacity-50"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
           >
             {pending ? "A importar..." : "Importar CSV do Parcel Panel"}
           </button>

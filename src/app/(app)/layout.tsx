@@ -14,6 +14,7 @@ import { Store } from "@/models/Store";
 import { TEAM_INVITES_ENABLED } from "@/lib/feature-flags";
 import { listPendingInvitationsForUser } from "@/lib/invitations";
 import { PendingInvitesBanner } from "@/components/pending-invites-banner";
+import { CsPendingBanner } from "@/components/cs-pending-banner";
 import { AppViewModeShell } from "@/components/app-view-mode-shell";
 import { AppViewModePathSync } from "@/components/app-view-mode-path-sync";
 import { getAppViewModeForUser } from "@/lib/app-view-mode-prefs";
@@ -83,6 +84,7 @@ export default async function AppLayout({
         <div className="flex min-w-0 flex-1 flex-col lg:overflow-y-auto">
           <Topbar user={user} stores={stores} workspaces={workspaces} />
           <PendingInvitesBanner count={pendingInviteCount} />
+          <CsPendingBanner />
           <main className="flex-1 p-4 pb-24 sm:p-5 lg:p-6 lg:pb-6">
             <PullToRefresh>{children}</PullToRefresh>
           </main>

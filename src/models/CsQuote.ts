@@ -14,11 +14,21 @@ const RoundSchema = new Schema(
   { _id: false },
 );
 
+const ObservedSchema = new Schema(
+  {
+    price: { type: Number, required: true },
+    at: { type: Date, default: () => new Date() },
+    source: { type: String, default: "manual" },
+  },
+  { _id: false },
+);
+
 /** Histórico de cotações por produto: preço original, ronda a ronda, COGS atual. */
 const CsQuoteSchema = new Schema(
   {
     workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
     productId: { type: String, required: true },
+    storeId: { type: Schema.Types.ObjectId, ref: "Store", default: null },
     title: { type: String, default: "" },
     link: { type: String, default: "" },
     currency: { type: String, default: "EUR" },
@@ -27,6 +37,8 @@ const CsQuoteSchema = new Schema(
     /** Última cotação aceite já confirmada numa fatura. */
     confirmed: { type: Boolean, default: false },
     rounds: { type: [RoundSchema], default: [] },
+    /** Preços vistos no PrimeFlow ou numa fatura (para detetar alterações da Mia). */
+    observed: { type: [ObservedSchema], default: [] },
     notes: { type: String, default: "" },
     deletedAt: { type: Date, default: null },
   },

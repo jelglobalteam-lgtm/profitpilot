@@ -1,5 +1,5 @@
-/** Valor normal de fulfilment da Mia por encomenda (EUR). */
-export const MIA_FULFILMENT_FEE = 3;
+/** Imposto UE por encomenda desde 1/11/2026 (era 3 € antes; confirmar no resumo da fatura). */
+export const MIA_FULFILMENT_FEE = 5;
 
 export type InvoiceLine = { orderNumber: string; amount: number; product: string; unitPrice: number | null };
 
@@ -39,7 +39,7 @@ export function parseInvoiceText(text: string): { lines: InvoiceLine[]; errors: 
   return { lines, errors };
 }
 
-export function checkInvoice(lines: InvoiceLine[], ctx: InvoiceContext): InvoiceFinding[] {
+export function checkInvoice(lines: InvoiceLine[], ctx: InvoiceContext, fee = MIA_FULFILMENT_FEE): InvoiceFinding[] {
   const out: InvoiceFinding[] = [];
   const byOrder = new Map<string, InvoiceLine[]>();
   for (const l of lines) byOrder.set(l.orderNumber, [...(byOrder.get(l.orderNumber) ?? []), l]);
@@ -47,9 +47,9 @@ export function checkInvoice(lines: InvoiceLine[], ctx: InvoiceContext): Invoice
     const fulfilment = ls.filter((l) => !l.product);
     const total = fulfilment.reduce((s, l) => s + l.amount, 0);
     if (fulfilment.length > 1) {
-      out.push({ kind: "duplicado", orderNumber: order, message: `A encomenda #${order} aparece ${fulfilment.length} vezes (${total.toFixed(2)} €) e devia ter ${MIA_FULFILMENT_FEE} €.` });
-    } else if (total > MIA_FULFILMENT_FEE + 0.001) {
-      out.push({ kind: "valor_acima", orderNumber: order, message: `A encomenda #${order} está com ${total.toFixed(2)} € e devia ter ${MIA_FULFILMENT_FEE} €.` });
+      out.push({ kind: "duplicado", orderNumber: order, message: `A encomenda #${order} aparece ${fulfilment.length} vezes (${total.toFixed(2)} €) e devia ter ${fee} €.` });
+    } else if (total > fee + 0.001) {
+      out.push({ kind: "valor_acima", orderNumber: order, message: `A encomenda #${order} está com ${total.toFixed(2)} € e devia ter ${fee} €.` });
     }
     const o = ctx.orders.get(order);
     if (!o) out.push({ kind: "encomenda_inexistente", orderNumber: order, message: `A encomenda #${order} não existe na Shopify.` });

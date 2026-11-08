@@ -15,15 +15,19 @@ import {
 } from "@/lib/cs-quotes";
 import {
   confirmQuoteInvoiceAction,
+  recordObservedPriceAction,
   recordQuoteReplyAction,
   recordQuoteRequestAction,
 } from "./quote-actions";
 
-const FILTERS: { key: QuoteStatus | "todos"; label: string }[] = [
+type Filter = QuoteStatus | "todos" | "alterados";
+
+const FILTERS: { key: Filter; label: string }[] = [
   { key: "por_pedir", label: "Por pedir" },
   { key: "a_aguardar", label: "A aguardar resposta" },
   { key: "a_negociar", label: "A negociar" },
   { key: "por_confirmar", label: "Confirmar na fatura" },
+  { key: "alterados", label: "Preço mudou sem pedido" },
   { key: "todos", label: "Todos" },
 ];
 
@@ -33,14 +37,17 @@ const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" }) : "—";
 
 export function PricesTab({ products, canEdit }: { products: QuoteProductView[]; canEdit: boolean }) {
-  const [filter, setFilter] = useState<QuoteStatus | "todos">("por_pedir");
+  const [filter, setFilter] = useState<Filter>("por_pedir");
   const [openId, setOpenId] = useState<string | null>(null);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     for (const p of products) m.set(p.status, (m.get(p.status) ?? 0) + 1);
     return m;
   }, [products]);
-  const rows = products.filter((p) => filter === "todos" || p.status === filter);
+  const changed = products.filter((p) => p.changedWithoutRequest).length;
+  const rows = products.filter((p) =>
+    filter === "todos" ? true : filter === "alterados" ? p.changedWithoutRequest : p.status === filter,
+  );
   const open = products.find((p) => p.productId === openId) ?? null;
 
   return (
@@ -56,13 +63,15 @@ export function PricesTab({ products, canEdit }: { products: QuoteProductView[];
             type="button"
             onClick={() => setFilter(f.key)}
             className={cn(
-              "rounded-full border px-3 py-1 text-sm",
-              filter === f.key ? "border-foreground bg-foreground text-background" : "border-border bg-surface",
+              "rounded-lg border px-3 py-1.5 text-sm font-medium",
+              filter === f.key
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-muted-foreground hover:bg-muted",
             )}
           >
             {f.label}{" "}
             <span className="tabular-nums">
-              ({f.key === "todos" ? products.length : (counts.get(f.key) ?? 0)})
+              ({f.key === "todos" ? products.length : f.key === "alterados" ? changed : (counts.get(f.key) ?? 0)})
             </span>
           </button>
         ))}
@@ -77,6 +86,8 @@ export function PricesTab({ products, canEdit }: { products: QuoteProductView[];
                 <th className="p-3">Produto</th>
                 <th className="p-3">Unidades</th>
                 <th className="p-3">Última venda</th>
+                <th className="p-3">Loja</th>
+                <th className="p-3">COGS original</th>
                 <th className="p-3">COGS atual</th>
                 <th className="p-3">Rondas</th>
                 <th className="p-3">Próxima ronda</th>
@@ -98,7 +109,15 @@ export function PricesTab({ products, canEdit }: { products: QuoteProductView[];
                       <span className="ml-1 text-xs text-muted-foreground">(+{p.recentUnits} em 30 dias)</span>
                     </td>
                     <td className="p-3">{day(p.lastSale)}</td>
-                    <td className="p-3 tabular-nums">{eur(p.currentCogs ?? p.shopifyCogs, p.currency)}</td>
+                    <td className="p-3">{p.storeName}</td>
+                    <td className="p-3 tabular-nums">{eur(p.originalCogs, p.currency)}</td>
+                    <td className="p-3 tabular-nums">
+                      {eur(p.currentCogs, p.currency)}
+                      {p.cogsChangedAt && (
+                        <span className="block text-xs text-muted-foreground">alterado a {day(p.cogsChangedAt)}</span>
+                      )}
+                      {p.changedWithoutRequest && <span className="block text-xs text-negative">mudou sem pedido registado</span>}
+                    </td>
                     <td className="p-3 tabular-nums">{p.rounds.length}</td>
                     <td className="p-3 tabular-nums">{nextQuoteThreshold(last?.units ?? 0)} un.</td>
                     <td className="p-3">{QUOTE_STATUS_LABEL[p.status]}</td>
@@ -133,6 +152,7 @@ function QuoteDialog({
   const [price, setPrice] = useState("");
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
+  const [seen, setSeen] = useState("");
   const last = p.rounds[p.rounds.length - 1];
   const waiting = !!last && !last.repliedAt;
   const text = miaQuoteMessage({ title: p.title, link, units: p.units, qualityCheck: qc });
@@ -165,7 +185,7 @@ function QuoteDialog({
           <div>
             <h2 className="text-lg font-semibold">{p.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {p.units} unidades vendidas · COGS atual {eur(p.currentCogs ?? p.shopifyCogs, p.currency)} · original{" "}
+              {p.units} unidades vendidas · COGS atual {eur(p.currentCogs, p.currency)} · original{" "}
               {eur(p.originalCogs, p.currency)}
             </p>
           </div>
@@ -235,7 +255,7 @@ function QuoteDialog({
               <button
                 type="button"
                 disabled={pending}
-                className="rounded-md bg-foreground px-3 py-1 text-sm text-background disabled:opacity-50"
+                className="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50"
                 onClick={async () => {
                   await copy();
                   run(() =>
@@ -286,7 +306,7 @@ function QuoteDialog({
             <button
               type="button"
               disabled={pending}
-              className="rounded-md bg-foreground px-3 py-1 text-sm text-background disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50"
               onClick={() => run(() => recordQuoteReplyAction({ productId: p.productId, response, price: num(price), note }))}
             >
               Guardar resposta
@@ -303,6 +323,31 @@ function QuoteDialog({
           >
             Confirmar que a fatura já traz o novo preço
           </button>
+        )}
+        {canEdit && (
+          <div className="space-y-2 rounded-md border border-border p-3">
+            <p className="text-sm font-medium">Preço visto no PrimeFlow ou na fatura</p>
+            <p className="text-xs text-muted-foreground">
+              Registe o preço que vê hoje. Se for diferente do COGS atual, o produto fica marcado como alterado sem pedido.
+              {p.observedPrice != null && ` Último registado: ${eur(p.observedPrice, p.currency)} a ${day(p.observedAt)}.`}
+            </p>
+            <div className="flex gap-2">
+              <input
+                className="w-40 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                placeholder="Preço por unidade"
+                value={seen}
+                onChange={(e) => setSeen(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={pending || num(seen) == null}
+                className="rounded-md border border-border px-3 py-1 text-sm disabled:opacity-50"
+                onClick={() => run(() => recordObservedPriceAction({ productId: p.productId, title: p.title, price: num(seen) ?? 0 }))}
+              >
+                Registar
+              </button>
+            </div>
+          </div>
         )}
         {error && <p className="text-sm text-negative">{error}</p>}
       </div>

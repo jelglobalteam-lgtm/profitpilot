@@ -23,6 +23,7 @@ import type { QuoteProductView } from "@/lib/cs-quote-data";
 import { PricesTab } from "./prices-tab";
 import { ShipmentsTab } from "./shipments-tab";
 import { InvoicesTab } from "./invoices-tab";
+import type { InvoiceData } from "@/lib/cs-invoice-data";
 import { shipmentAlert, type ShipmentView } from "@/lib/parcelpanel-csv";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
@@ -64,8 +65,10 @@ function useRun() {
   return { run, pending, error };
 }
 
-export function AtendimentoClient({ data, quotes, shipments, canEdit }: { data: CsData; quotes: QuoteProductView[]; shipments: ShipmentView[]; canEdit: boolean }) {
-  const [tab, setTab] = useState("casos");
+export function AtendimentoClient({ data, quotes, shipments, invoices, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; shipments: ShipmentView[]; invoices: InvoiceData; canEdit: boolean; initialTab?: string }) {
+  const [tab, setTab] = useState(
+    ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab ?? "") ? (initialTab as string) : "casos",
+  );
   const open = data.cases.filter((c) => c.status !== "resolvido" && c.status !== "respondido");
   const alerts = useMemo(() => computeCsAlerts(data.cases, data.mia), [data.cases, data.mia]);
   const pill = (n: number) =>
@@ -92,7 +95,7 @@ export function AtendimentoClient({ data, quotes, shipments, canEdit }: { data: 
           { id: "produtos", label: "Produtos" },
           { id: "precos", label: "Preços", badge: pill(quotes.filter((q) => q.status === "por_pedir").length) },
           { id: "envios", label: "Envios", badge: pill(shipments.filter((s) => shipmentAlert({ status: s.status, lastEventAt: s.lastEventAt ? new Date(s.lastEventAt) : null, orderedAt: s.orderedAt ? new Date(s.orderedAt) : null })).length) },
-          { id: "faturas", label: "Faturas" },
+          { id: "faturas", label: "Faturas", badge: pill(invoices.issues.filter((i) => i.level === "alto").length) },
           { id: "prazos", label: "Prazos e alertas", badge: pill(alerts.length) },
           { id: "geral", label: "Visão geral" },
         ]}
@@ -103,7 +106,7 @@ export function AtendimentoClient({ data, quotes, shipments, canEdit }: { data: 
       {tab === "produtos" && <ProductsTab cases={data.cases} />}
       {tab === "precos" && <PricesTab products={quotes} canEdit={canEdit} />}
       {tab === "envios" && <ShipmentsTab shipments={shipments} canEdit={canEdit} />}
-      {tab === "faturas" && <InvoicesTab canEdit={canEdit} />}
+      {tab === "faturas" && <InvoicesTab data={invoices} canEdit={canEdit} />}
       {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
       {tab === "geral" && <OverviewTab cases={data.cases} />}
     </div>
