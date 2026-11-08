@@ -42,7 +42,7 @@ export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "sto
 
   const range = miaExportRange(coverage?.coveredUntil ?? null);
   if (!range) add("mia-export", "Exportar a conversa da Mia", 1, "mia");
-  else if (range.staleDays >= 2) add("mia-export", `Exportar a conversa da Mia de ${range.from} a ${range.to}`, 1, "mia");
+  else if (range.staleDays >= 3) add("mia-export", `Exportar a conversa da Mia de ${range.from} a ${range.to}`, 1, "mia");
 
   const toRequest = quotes.filter((q) => q.status === "por_pedir").length;
   const toDecide = quotes.filter((q) => q.status === "a_negociar").length;

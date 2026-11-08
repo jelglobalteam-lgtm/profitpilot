@@ -66,7 +66,7 @@ export function checkInvoices(invoices: InvoiceView[], now = Date.now()): Invoic
         if (inv.orderFrom != null && inv.orderTo != null) {
           const span = inv.orderTo - inv.orderFrom + 1;
           if (span !== inv.quantity) {
-            out.push({ invoiceId: inv.id, level: "medio", message: `${inv.number}: o intervalo #${inv.orderFrom} a #${inv.orderTo} tem ${span} números e a fatura conta ${inv.quantity} encomendas. Confirme se ${Math.abs(span - inv.quantity)} foi cancelada ou reembolsada.` });
+            out.push({ invoiceId: inv.id, level: "medio", message: `${inv.number}: o intervalo #${inv.orderFrom} a #${inv.orderTo} tem ${span} números e a fatura conta ${inv.quantity} encomendas. ${span > inv.quantity ? `Confirme na loja se ${span - inv.quantity} foi cancelada ou reembolsada; se não foi, ficou uma encomenda por cobrar e deve aparecer na fatura seguinte.` : `A fatura cobra mais encomendas do que o intervalo tem.`}` });
           }
         }
       }
@@ -105,12 +105,29 @@ export function checkInvoices(invoices: InvoiceView[], now = Date.now()): Invoic
       }
     }
   }
+  // Lacunas: encomendas entre intervalos de faturas da Mia que não estão cobertas por nenhuma fatura importada.
+  const ranged = mia
+    .filter((i) => i.orderFrom != null && i.orderTo != null)
+    .sort((a, b) => (a.orderFrom as number) - (b.orderFrom as number));
+  let reach: InvoiceView | null = null;
+  for (const inv of ranged) {
+    if (reach && (inv.orderFrom as number) > (reach.orderTo as number) + 1) {
+      const from = (reach.orderTo as number) + 1;
+      const to = (inv.orderFrom as number) - 1;
+      out.push({
+        invoiceId: inv.id,
+        level: "alto",
+        message: `Faltam faturas da Mia das encomendas #${from}${to > from ? ` a #${to}` : ""}, entre ${reach.number} e ${inv.number}. Importe as faturas em falta.`,
+      });
+    }
+    if (!reach || (inv.orderTo as number) > (reach.orderTo as number)) reach = inv;
+  }
   if (running < 0 && mia.length) out.push({ invoiceId: mia[mia.length - 1].id, level: "alto", message: `O saldo pré-pago de impostos da Mia está negativo (${eur(round2(running))}). Falta uma recarga.` });
   return out;
 }
 
-/** Intervalos de importação: Mia de 5 em 5 dias, agência Google semanal. */
-export const MIA_IMPORT_DAYS = 5;
+/** Intervalos de importação: Mia de 3 em 3 dias, agência Google semanal. */
+export const MIA_IMPORT_DAYS = 3;
 export const GOOGLE_IMPORT_DAYS = 7;
 
 /** Avisos de faturas por importar, a partir da data da última fatura registada de cada tipo. */

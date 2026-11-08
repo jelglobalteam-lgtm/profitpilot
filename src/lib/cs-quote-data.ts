@@ -6,6 +6,7 @@ import { activeStoreQueryForUser } from "@/lib/store-scope";
 import { Order } from "@/models/Order";
 import { Store } from "@/models/Store";
 import { CogsHistory } from "@/models/CogsHistory";
+import { ProductCatalog } from "@/models/ProductCatalog";
 import { CsQuote, type CsQuoteDoc } from "@/models/CsQuote";
 import { quoteStatus, type QuoteResponse, type QuoteRoundView, type QuoteStatus } from "@/lib/cs-quotes";
 
@@ -57,7 +58,7 @@ export async function loadQuotes(
   const wid = new mongoose.Types.ObjectId(user.workspaceId);
   const storeQuery = activeStoreQueryForUser(user);
   if (storeId && mongoose.isValidObjectId(storeId)) storeQuery._id = new mongoose.Types.ObjectId(storeId);
-  const stores = await Store.find(storeQuery).select("name").lean<{ _id: mongoose.Types.ObjectId; name: string }[]>();
+  const stores = await Store.find(storeQuery).select("name displayUrl shopDomain").lean<{ _id: mongoose.Types.ObjectId; name: string; displayUrl?: string; shopDomain?: string }[]>();
   const storeIds = stores.map((s) => s._id);
   const storeName = new Map(stores.map((s) => [String(s._id), s.name]));
   if (storeIds.length === 0) return [];
@@ -91,13 +92,20 @@ export async function loadQuotes(
   ]);
 
   const productIds = sold.map((s) => s._id);
-  const [quotes, costs] = await Promise.all([
+  const host = new Map(
+    stores.map((s) => [String(s._id), (s.displayUrl || s.shopDomain || "").replace(/^https?:\/\//, "").replace(/\/+$/, "")]),
+  );
+  const [catalog, quotes, costs] = await Promise.all([
+    ProductCatalog.find({ storeId: { $in: storeIds }, productId: { $in: productIds } })
+      .select("productId handle")
+      .lean<{ productId: string; handle?: string | null }[]>(),
     CsQuote.find({ workspaceId: wid, deletedAt: null }).lean<CsQuoteDoc[]>(),
     CogsHistory.find({ storeId: { $in: storeIds }, productId: { $in: productIds } })
       .sort({ effectiveFrom: 1 })
       .select("productId cost effectiveFrom")
       .lean<{ productId: string; cost: number; effectiveFrom: Date }[]>(),
   ]);
+  const handleBy = new Map(catalog.filter((c) => c.handle).map((c) => [c.productId, c.handle as string]));
   const costsBy = new Map<string, CostPoint[]>();
   for (const c of costs) {
     const list = costsBy.get(c.productId) ?? [];
@@ -127,7 +135,7 @@ export async function loadQuotes(
         units: s.units,
         recentUnits: s.recent,
         lastSale: s.last ? new Date(s.last).toISOString() : null,
-        link: q?.link ?? "",
+        link: q?.link || (handleBy.get(s._id) && host.get(String(s.storeId)) ? `https://${host.get(String(s.storeId))}/products/${handleBy.get(s._id)}` : ""),
         currency: q?.currency ?? "EUR",
         originalCogs: original,
         currentCogs: current,

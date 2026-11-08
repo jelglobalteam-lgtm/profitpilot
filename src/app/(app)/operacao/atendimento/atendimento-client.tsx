@@ -1,12 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { PageTabs } from "@/components/page-tabs";
 import { cn } from "@/lib/utils";
 import {
   CS_ISSUE_LABEL,
-  CS_QUICK_ACTIONS,
   CS_STATUSES,
   CS_STATUS_LABEL,
   CS_STORES,
@@ -31,7 +30,6 @@ import {
   addCsMiaMessageAction,
   closeCsCaseAction,
   decideCsCaseAction,
-  quickCsActionAction,
   saveCsTemplateAction,
   setCsMiaStatusAction,
   setCsTemplateAutoAction,
@@ -271,19 +269,6 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
   const [decisionText, setDecisionText] = useState("");
   const edited = reply !== c.proposedReply;
   const refundLocked = c.status === "reembolso" || c.classification === "vermelho";
-  useEffect(() => {
-    if (!canEdit) return;
-    function onKey(e: KeyboardEvent) {
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const a = CS_QUICK_ACTIONS.find((x) => x.shortcut.toLowerCase() === e.key.toLowerCase());
-      // Reembolsou fica só por clique: marca o caso como resolvido.
-      if (a && a.key !== "reembolsou") run(() => quickCsActionAction({ caseId: c.id, action: a.key }));
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [c.id, canEdit, run]);
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
@@ -411,22 +396,6 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
               Marcar como tratado
             </button>
           )}
-        </div>
-      )}
-      {canEdit && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground">Já feito neste caso:</span>
-          {CS_QUICK_ACTIONS.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              disabled={pending}
-              onClick={() => run(() => quickCsActionAction({ caseId: c.id, action: a.key }))}
-              className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-            >
-              {a.label}{a.key !== "reembolsou" && <kbd className="ml-1 text-muted-foreground">{a.shortcut}</kbd>}
-            </button>
-          ))}
         </div>
       )}
       {dialog && (
