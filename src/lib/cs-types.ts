@@ -106,6 +106,7 @@ export type CsCaseView = {
   decision: CsDecision | null;
   ageDays: number;
   openedAt: string;
+  createdAt: string;
   updatedAt: string;
 };
 

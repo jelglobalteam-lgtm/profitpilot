@@ -51,6 +51,7 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     decision: (d.decision as CsDecision | null) ?? null,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
+    createdAt: new Date(d.createdAt ?? d.openedAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };
 }

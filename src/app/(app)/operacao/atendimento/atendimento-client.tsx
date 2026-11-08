@@ -61,18 +61,29 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
   const [tab, setTab] = useState("casos");
   const open = data.cases.filter((c) => c.status !== "resolvido" && c.status !== "respondido");
   const alerts = useMemo(() => computeCsAlerts(data.cases, data.mia), [data.cases, data.mia]);
+  const pill = (n: number) =>
+    n ? (
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">{n}</span>
+    ) : undefined;
+  const lastRead = data.cases.reduce((m, c) => (c.createdAt > m ? c.createdAt : m), "");
+  const lastReadLabel = lastRead
+    ? new Date(lastRead).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "sem registo";
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Atendimento</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Atendimento</h1>
+        <p className="text-xs text-muted-foreground">Emails lidos pela última vez: {lastReadLabel}</p>
+      </div>
       <PageTabs
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: "casos", label: "Casos", badge: open.length || undefined },
-          { id: "templates", label: "Templates", badge: data.templates.filter((t) => t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual).length || undefined },
+          { id: "casos", label: "Casos", badge: pill(open.length) },
+          { id: "templates", label: "Templates", badge: pill(data.templates.filter((t) => t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual).length) },
           { id: "mia", label: "Mia" },
           { id: "produtos", label: "Produtos" },
-          { id: "prazos", label: "Prazos e alertas", badge: alerts.length || undefined },
+          { id: "prazos", label: "Prazos e alertas", badge: pill(alerts.length) },
           { id: "geral", label: "Visão geral" },
         ]}
       />
