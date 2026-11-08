@@ -111,10 +111,11 @@ const GROUPS: { key: CaseGroup; label: string }[] = [
 
 /** Um caso com decisão do Emanuel mas ainda por tratar deixa de contar como "para aprovar". */
 function groupOf(c: CsCaseView): CaseGroup {
-  if (c.status === "para_aprovar" && (c.decision === "aprovado" || c.decision === "aprovado_com_edicao")) {
+  const decidable = c.status === "para_aprovar" || c.status === "reembolso";
+  if (decidable && (c.decision === "aprovado" || c.decision === "aprovado_com_edicao")) {
     return "aprovado";
   }
-  if (c.status === "para_aprovar" && c.decision === "rejeitado") return "rejeitado";
+  if (decidable && c.decision === "rejeitado") return "rejeitado";
   return c.status;
 }
 
