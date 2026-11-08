@@ -56,7 +56,7 @@ export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "sto
   const lastImport = shipments.reduce((m, s) => Math.max(m, new Date(s.importedAt).getTime()), 0);
   const shipAlerts = shipments.filter((s) => shipmentAlert({ status: s.status, lastEventAt: s.lastEventAt, orderedAt: s.orderedAt })).length;
   add("envios", plural(shipAlerts, "envio com alerta", "envios com alerta"), shipAlerts, "envios");
-  if (!lastImport || Date.now() - lastImport > 2 * DAY) add("envios-import", "Importar o CSV do Parcel Panel", 1, "envios");
+  if (lastImport && Date.now() - lastImport > 2 * DAY) add("envios-import", "Importar o CSV do Parcel Panel", 1, "envios");
 
   const high = invoices.issues.filter((i) => i.level === "alto");
   add("faturas", plural(high.length, "aviso em faturas", "avisos em faturas"), high.length, "faturas");
