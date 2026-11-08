@@ -7,6 +7,7 @@ import { CsMiaMessage } from "@/models/CsMiaMessage";
 import { CsMiaCoverage } from "@/models/CsMiaCoverage";
 import { CsShipment } from "@/models/CsShipment";
 import { loadQuotes } from "@/lib/cs-quote-data";
+import { loadCogsChanges } from "@/lib/cs-cogs-data";
 import { loadInvoices } from "@/lib/cs-invoice-data";
 import { shipmentAlert, type ShipmentStatus } from "@/lib/parcelpanel-csv";
 
@@ -26,12 +27,13 @@ export function miaExportRange(coveredUntil: Date | null, now = new Date()) {
 export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "storeAccess">): Promise<PendingItem[]> {
   await connectToDatabase();
   const wid = new mongoose.Types.ObjectId(user.workspaceId);
-  const [cases, miaWaiting, coverage, shipments, quotes, invoices] = await Promise.all([
+  const [cases, miaWaiting, coverage, shipments, quotes, cogsChanges, invoices] = await Promise.all([
     CsCase.countDocuments({ workspaceId: wid, deletedAt: null, status: { $in: ["para_aprovar", "escalar", "reembolso"] }, decision: null }),
     CsMiaMessage.countDocuments({ workspaceId: wid, deletedAt: null, status: "enviada" }),
     CsMiaCoverage.findOne({ workspaceId: wid }).lean<{ coveredUntil: Date | null } | null>(),
     CsShipment.find({ workspaceId: wid }).select("status lastEventAt orderedAt importedAt").lean<{ status: ShipmentStatus; lastEventAt: Date | null; orderedAt: Date | null; importedAt: Date }[]>(),
     loadQuotes(user),
+    loadCogsChanges(user),
     loadInvoices(user.workspaceId),
   ]);
   const items: PendingItem[] = [];
@@ -51,6 +53,8 @@ export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "sto
   add("cotacoes", plural(toRequest, "produto para pedir cotação", "produtos para pedir cotação"), toRequest, "precos");
   add("contrapropostas", plural(toDecide, "contraproposta a decidir", "contrapropostas a decidir"), toDecide, "precos");
   add("confirmar", plural(toConfirm, "preço novo a confirmar na fatura", "preços novos a confirmar na fatura"), toConfirm, "precos");
+  const increases = cogsChanges.filter((c) => c.alert).length;
+  add("aumentos", plural(increases, "aumento de preço por esclarecer com a Mia", "aumentos de preço por esclarecer com a Mia"), increases, "precos");
   add("alterados", plural(changed, "preço alterado sem pedido registado", "preços alterados sem pedido registado"), changed, "precos");
 
   const lastImport = shipments.reduce((m, s) => Math.max(m, new Date(s.importedAt).getTime()), 0);

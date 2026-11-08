@@ -69,3 +69,15 @@ export function miaQuoteMessage(opts: {
   if (!opts.qualityCheck) return `${base} Thank you.`;
   return `${base} Along with this, could you please send photos of the latest batch, the size chart and a confirmation of material, colours and sizes available? Thank you.`;
 }
+
+/** Mensagem à Mia (em inglês) quando o preço que pagamos subiu sem aviso. */
+export function miaPriceIncreaseMessage(i: { title: string; link: string; from: number; to: number; at: string; currency: string }): string {
+  const fmt = (n: number) => `${n.toFixed(2)} ${i.currency}`;
+  const d = new Date(i.at).toLocaleDateString("en-GB", { timeZone: "Europe/Lisbon" });
+  return [
+    "Hi Mia,",
+    `I noticed that the price of "${i.title}"${i.link ? ` (${i.link})` : ""} changed from ${fmt(i.from)} to ${fmt(i.to)} (seen on ${d}).`,
+    "Could you please explain the change? We had agreed on the previous price and would like to keep it.",
+    "Thank you.",
+  ].join("\n\n");
+}

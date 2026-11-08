@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import type { QuoteProductView } from "@/lib/cs-quote-data";
+import type { CogsChangeView } from "@/lib/cs-cogs-data";
+import { CogsChanges } from "./cogs-changes";
 import {
   QUOTE_RESPONSES,
   QUOTE_RESPONSE_LABEL,
@@ -36,7 +38,7 @@ const eur = (n: number | null, cur = "EUR") =>
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" }) : "—";
 
-export function PricesTab({ products, canEdit }: { products: QuoteProductView[]; canEdit: boolean }) {
+export function PricesTab({ products, cogsChanges, canEdit }: { products: QuoteProductView[]; cogsChanges: CogsChangeView[]; canEdit: boolean }) {
   const [filter, setFilter] = useState<Filter>("por_pedir");
   const [openId, setOpenId] = useState<string | null>(null);
   const counts = useMemo(() => {
@@ -52,6 +54,7 @@ export function PricesTab({ products, canEdit }: { products: QuoteProductView[];
 
   return (
     <div className="space-y-3">
+      <CogsChanges rows={cogsChanges} canEdit={canEdit} />
       <p className="text-sm text-muted-foreground">
         Pode pedir nova cotação à Mia aos 30, 60, 90 e depois a cada 100 unidades vendidas. O pedido só pergunta se é
         possível rever a cotação por causa do volume, sem indicar desconto, e deve vir com verificação de qualidade.

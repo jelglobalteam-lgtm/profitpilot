@@ -126,3 +126,25 @@ export async function recordObservedPriceAction(input: z.input<typeof observedSc
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
+
+const reviewSchema = z.object({
+  productId: z.string().min(1),
+  status: z.enum(["perguntado", "aceite"]),
+  price: z.number().min(0).nullable().optional(),
+});
+
+/** Regista o que o Emanuel fez com uma diferença de preço: perguntou à Mia ou aceitou o preço novo. */
+export async function reviewCogsChangeAction(input: z.input<typeof reviewSchema>): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  const p = reviewSchema.safeParse(input);
+  if (!p.success) return { error: "Dados inválidos." };
+  await connectToDatabase();
+  await CsQuote.updateOne(
+    { workspaceId: new mongoose.Types.ObjectId(user.workspaceId), productId: p.data.productId },
+    { $set: { cogsReview: { status: p.data.status, at: new Date(), price: p.data.price ?? null } } },
+    { upsert: true },
+  );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}

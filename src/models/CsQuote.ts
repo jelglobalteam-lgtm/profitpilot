@@ -39,6 +39,18 @@ const CsQuoteSchema = new Schema(
     rounds: { type: [RoundSchema], default: [] },
     /** Preços vistos no PrimeFlow ou numa fatura (para detetar alterações da Mia). */
     observed: { type: [ObservedSchema], default: [] },
+    /** O que o Emanuel fez com a última diferença de preço detetada (perguntou à Mia ou aceitou). */
+    cogsReview: {
+      type: new Schema(
+        {
+          status: { type: String, enum: ["perguntado", "aceite"], required: true },
+          at: { type: Date, default: () => new Date() },
+          price: { type: Number, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     notes: { type: String, default: "" },
     deletedAt: { type: Date, default: null },
   },

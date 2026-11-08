@@ -46,3 +46,11 @@ test("lacuna entre intervalos de faturas da Mia", () => {
   assert.match(gap[0].message, /#1032 a #1043/);
   assert.equal(checkInvoices([a, { ...b, orderFrom: 1032, orderTo: 1045 }]).filter((i) => i.message.startsWith("Faltam faturas")).length, 0);
 });
+
+import { miaPriceIncreaseMessage } from "../src/lib/cs-quotes.ts";
+
+test("mensagem à Mia quando o preço sobe", () => {
+  const m = miaPriceIncreaseMessage({ title: "Casaco", link: "https://x.it/products/c", from: 5, to: 6, at: "2026-11-05T10:00:00Z", currency: "EUR" });
+  assert.match(m, /from 5\.00 EUR to 6\.00 EUR/);
+  assert.match(m, /explain the change/);
+});

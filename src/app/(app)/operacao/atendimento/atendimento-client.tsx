@@ -21,6 +21,7 @@ import type { CsData } from "@/lib/cs-data";
 import type { QuoteProductView } from "@/lib/cs-quote-data";
 import { AttentionBang } from "@/components/attention-bang";
 import { PricesTab } from "./prices-tab";
+import type { CogsChangeView } from "@/lib/cs-cogs-data";
 import { ShipmentsTab } from "./shipments-tab";
 import { InvoicesTab } from "./invoices-tab";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
@@ -64,7 +65,7 @@ function useRun() {
   return { run, pending, error };
 }
 
-export function AtendimentoClient({ data, quotes, shipments, invoices, attentionTabs, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; shipments: ShipmentView[]; invoices: InvoiceData; attentionTabs: string[]; canEdit: boolean; initialTab?: string }) {
+export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoices, attentionTabs, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; cogsChanges: CogsChangeView[]; shipments: ShipmentView[]; invoices: InvoiceData; attentionTabs: string[]; canEdit: boolean; initialTab?: string }) {
   const [tab, setTab] = useState(
     ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab ?? "") ? (initialTab as string) : "casos",
   );
@@ -111,7 +112,7 @@ export function AtendimentoClient({ data, quotes, shipments, invoices, attention
       {tab === "templates" && <TemplatesTab templates={data.templates} canEdit={canEdit} />}
       {tab === "mia" && <MiaTab messages={data.mia} canEdit={canEdit} />}
       {tab === "produtos" && <ProductsTab cases={data.cases} />}
-      {tab === "precos" && <PricesTab products={quotes} canEdit={canEdit} />}
+      {tab === "precos" && <PricesTab products={quotes} cogsChanges={cogsChanges} canEdit={canEdit} />}
       {tab === "envios" && <ShipmentsTab shipments={shipments} canEdit={canEdit} />}
       {tab === "faturas" && <InvoicesTab data={invoices} canEdit={canEdit} />}
       {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
