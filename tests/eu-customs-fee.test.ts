@@ -8,6 +8,7 @@ import { appliesAutoEuCustomsFees } from "@/lib/cogs-modes.ts";
 import {
   EU_CUSTOMS_FEE_EFFECTIVE_FROM,
   EU_CUSTOMS_FEE_PER_ORDER_EUR,
+  euCustomsFeePerOrderEurForDay,
 } from "../src/lib/eu-category-fees-types.ts";
 import { resolveEuCustomsFeeOrderScope } from "../src/lib/eu-customs-fee-scope.ts";
 import {
@@ -39,6 +40,14 @@ describe("eu-customs-countries", () => {
   it("normaliza código ISO2", () => {
     assert.equal(normalizeShippingCountryCode(" pt "), "PT");
     assert.equal(normalizeShippingCountryCode(""), null);
+  });
+});
+
+describe("eu-customs-fee — tarifa por dia", () => {
+  it("3 EUR até 31/10/2026 e 5 EUR desde 01/11/2026", () => {
+    assert.equal(euCustomsFeePerOrderEurForDay("2026-10-31"), 3);
+    assert.equal(euCustomsFeePerOrderEurForDay("2026-11-01"), 5);
+    assert.equal(euCustomsFeePerOrderEurForDay("2026-12-15"), 5);
   });
 });
 

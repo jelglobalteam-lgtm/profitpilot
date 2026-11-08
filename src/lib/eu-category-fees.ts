@@ -5,7 +5,7 @@ import { Order } from "@/models/Order";
 import { Store } from "@/models/Store";
 import {
   EU_CUSTOMS_FEE_EFFECTIVE_FROM,
-  EU_CUSTOMS_FEE_PER_ORDER_EUR,
+  euCustomsFeePerOrderEurForDay,
   type EuCustomsFeeAutoSummary,
   type EuCustomsFeeDaySummary,
 } from "@/lib/eu-category-fees-types";
@@ -237,9 +237,10 @@ async function feePerOrderInBase(
   baseCurrency: string,
   dateKey: string,
 ): Promise<number> {
-  if (baseCurrency === "EUR") return EU_CUSTOMS_FEE_PER_ORDER_EUR;
+  const perOrderEur = euCustomsFeePerOrderEurForDay(dateKey);
+  if (baseCurrency === "EUR") return perOrderEur;
   const fx = await convertToBaseCurrency(
-    EU_CUSTOMS_FEE_PER_ORDER_EUR,
+    perOrderEur,
     "EUR",
     baseCurrency,
     dateKey,
@@ -431,7 +432,7 @@ export async function buildEuCustomsFeeAutoSummary(
 
   return {
     automatic: true,
-    feePerOrderEur: EU_CUSTOMS_FEE_PER_ORDER_EUR,
+    feePerOrderEur: euCustomsFeePerOrderEurForDay(today),
     effectiveFrom: EU_CUSTOMS_FEE_EFFECTIVE_FROM,
     baseCurrency,
     periodEuOrders: periodOrders,

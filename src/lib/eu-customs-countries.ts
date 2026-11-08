@@ -1,4 +1,4 @@
-/** Países UE/EEE onde a Win-Win aplica €3 por encomenda (código ISO 3166-1 alpha-2). */
+/** Países UE/EEE onde a Win-Win aplica €3 por encomenda até 31/10/2026 e €5 desde 01/11/2026 (código ISO 3166-1 alpha-2). */
 export const EU_SHIPPING_COUNTRY_CODES = [
   "AT",
   "BE",
