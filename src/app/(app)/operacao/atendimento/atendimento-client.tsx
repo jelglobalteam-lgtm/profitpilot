@@ -18,6 +18,8 @@ import {
   type CsTemplateView,
 } from "@/lib/cs-types";
 import type { CsData } from "@/lib/cs-data";
+import type { QuoteProductView } from "@/lib/cs-quote-data";
+import { PricesTab } from "./prices-tab";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
   addCsMiaMessageAction,
@@ -57,7 +59,7 @@ function useRun() {
   return { run, pending, error };
 }
 
-export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: boolean }) {
+export function AtendimentoClient({ data, quotes, canEdit }: { data: CsData; quotes: QuoteProductView[]; canEdit: boolean }) {
   const [tab, setTab] = useState("casos");
   const open = data.cases.filter((c) => c.status !== "resolvido" && c.status !== "respondido");
   const alerts = useMemo(() => computeCsAlerts(data.cases, data.mia), [data.cases, data.mia]);
@@ -83,6 +85,7 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
           { id: "templates", label: "Templates", badge: pill(data.templates.filter((t) => t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual).length) },
           { id: "mia", label: "Mia" },
           { id: "produtos", label: "Produtos" },
+          { id: "precos", label: "Preços", badge: pill(quotes.filter((q) => q.status === "por_pedir").length) },
           { id: "prazos", label: "Prazos e alertas", badge: pill(alerts.length) },
           { id: "geral", label: "Visão geral" },
         ]}
@@ -91,6 +94,7 @@ export function AtendimentoClient({ data, canEdit }: { data: CsData; canEdit: bo
       {tab === "templates" && <TemplatesTab templates={data.templates} canEdit={canEdit} />}
       {tab === "mia" && <MiaTab messages={data.mia} canEdit={canEdit} />}
       {tab === "produtos" && <ProductsTab cases={data.cases} />}
+      {tab === "precos" && <PricesTab products={quotes} canEdit={canEdit} />}
       {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
       {tab === "geral" && <OverviewTab cases={data.cases} />}
     </div>
