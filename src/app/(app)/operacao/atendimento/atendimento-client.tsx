@@ -238,6 +238,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
   const [dialog, setDialog] = useState<"rejeitado" | "escalado" | null>(null);
   const [reason, setReason] = useState("");
   const [reply, setReply] = useState(c.proposedReply);
+  const [decisionText, setDecisionText] = useState("");
   const edited = reply !== c.proposedReply;
   const refundLocked = c.status === "reembolso" || c.classification === "vermelho";
 
@@ -253,6 +254,20 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
       <p className="text-sm text-muted-foreground">
         {c.orderNumber} · {c.items}
       </p>
+      {c.decisionQuestion && (
+        <div className="space-y-2 rounded-lg border border-warning/60 bg-warning/10 p-3">
+          <p className="text-[13px] font-medium">Preciso da sua decisão</p>
+          <p className="whitespace-pre-wrap text-sm">{c.decisionQuestion}</p>
+          <textarea
+            value={decisionText}
+            onChange={(e) => setDecisionText(e.target.value)}
+            disabled={!canEdit}
+            rows={3}
+            placeholder="A sua decisão (fica registada e eu ajusto a resposta)"
+            className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+          />
+        </div>
+      )}
       <Field label="Último email do cliente (PT)">{c.lastCustomerEmailPt}</Field>
       <Field label="Resposta proposta (PT)">{c.proposedReplyPt}</Field>
 
@@ -270,6 +285,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
               ? c.timeline.map((t) => `${t.n}.º email: ${t.summary}`).join("\n\n")
               : ""}
           </Field>
+          <Field label="Nota do Claude">{c.managerNote}</Field>
           <Field label="Ofertas feitas e recusadas">{c.offered}</Field>
           <Field label="O que o cliente pede agora">{c.requests}</Field>
           <div>
@@ -311,7 +327,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
                 decideCsCaseAction({
                   caseId: c.id,
                   decision: edited ? "aprovado_com_edicao" : "aprovado",
-                  note: c.managerNote,
+                  note: decisionText.trim() || c.managerNote,
                   editedReply: edited ? reply : undefined,
                 }),
               )

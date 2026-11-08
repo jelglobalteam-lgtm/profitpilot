@@ -51,6 +51,7 @@ const CsCaseSchema = new Schema(
     proposedReply: { type: String, default: "" },
     proposedReplyPt: { type: String, default: "" },
     managerNote: { type: String, default: "" },
+    decisionQuestion: { type: String, default: "" },
     decision: { type: String, enum: [...CS_DECISIONS, null], default: null },
     decidedAt: { type: Date, default: null },
     decidedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

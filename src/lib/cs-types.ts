@@ -103,6 +103,7 @@ export type CsCaseView = {
   proposedReply: string;
   proposedReplyPt: string;
   managerNote: string;
+  decisionQuestion: string;
   decision: CsDecision | null;
   ageDays: number;
   openedAt: string;

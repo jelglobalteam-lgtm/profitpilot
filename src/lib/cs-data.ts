@@ -48,6 +48,7 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     proposedReply: d.proposedReply ?? "",
     proposedReplyPt: d.proposedReplyPt ?? "",
     managerNote: d.managerNote ?? "",
+    decisionQuestion: d.decisionQuestion ?? "",
     decision: (d.decision as CsDecision | null) ?? null,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
