@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AttentionBang } from "@/components/attention-bang";
 import type { InvoiceFinding } from "@/lib/cs-invoice-check";
 import {
   INVOICE_KIND_LABEL,
@@ -149,7 +150,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
       {data.issues.length > 0 && (
         <ul className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
           {data.issues.map((i, n) => (
-            <li key={n} className={i.level === "alto" ? "text-negative" : ""}>{i.message}</li>
+            <li key={n} className={`flex items-start gap-2 ${i.level === "alto" ? "text-negative" : ""}`}><AttentionBang title="Aviso a ver" /><span>{i.message}</span></li>
           ))}
         </ul>
       )}
@@ -171,7 +172,12 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
             <tbody>
               {data.invoices.map((i) => (
                 <tr key={i.id} className="border-t border-border align-top">
-                  <td className="p-3 font-medium">{i.number}</td>
+                  <td className="p-3 font-medium">
+                    <span className="inline-flex items-center gap-2">
+                      {data.issues.some((x) => x.invoiceId === i.id) && <AttentionBang title="Esta fatura tem um aviso" />}
+                      {i.number}
+                    </span>
+                  </td>
                   <td className="p-3">{INVOICE_KIND_LABEL[i.kind]}</td>
                   <td className="p-3">{day(i.issueDate)}</td>
                   <td className="p-3">{day(i.dueDate)}</td>
