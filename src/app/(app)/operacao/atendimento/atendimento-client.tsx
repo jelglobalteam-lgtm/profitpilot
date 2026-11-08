@@ -20,6 +20,7 @@ import {
 } from "@/lib/cs-types";
 import type { CsData } from "@/lib/cs-data";
 import type { QuoteProductView } from "@/lib/cs-quote-data";
+import { AttentionBang } from "@/components/attention-bang";
 import { PricesTab } from "./prices-tab";
 import { ShipmentsTab } from "./shipments-tab";
 import { InvoicesTab } from "./invoices-tab";
@@ -65,7 +66,7 @@ function useRun() {
   return { run, pending, error };
 }
 
-export function AtendimentoClient({ data, quotes, shipments, invoices, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; shipments: ShipmentView[]; invoices: InvoiceData; canEdit: boolean; initialTab?: string }) {
+export function AtendimentoClient({ data, quotes, shipments, invoices, attentionTabs, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; shipments: ShipmentView[]; invoices: InvoiceData; attentionTabs: string[]; canEdit: boolean; initialTab?: string }) {
   const [tab, setTab] = useState(
     ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab ?? "") ? (initialTab as string) : "casos",
   );
@@ -75,6 +76,14 @@ export function AtendimentoClient({ data, quotes, shipments, invoices, canEdit, 
     n ? (
       <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">{n}</span>
     ) : undefined;
+  const bang = (id: string, extra?: boolean) =>
+    attentionTabs.includes(id) || extra ? <AttentionBang /> : undefined;
+  const withBang = (id: string, badge: React.ReactNode, extra?: boolean) => (
+    <>
+      {badge}
+      {bang(id, extra)}
+    </>
+  );
   const lastRead = data.cases.reduce((m, c) => (c.createdAt > m ? c.createdAt : m), "");
   const lastReadLabel = lastRead
     ? new Date(lastRead).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -89,14 +98,14 @@ export function AtendimentoClient({ data, quotes, shipments, invoices, canEdit, 
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: "casos", label: "Casos", badge: pill(open.length) },
+          { id: "casos", label: "Casos", badge: withBang("casos", pill(open.length)) },
           { id: "templates", label: "Templates", badge: pill(data.templates.filter((t) => t.approvedClean >= AUTONOMY_THRESHOLD && !t.autoSend && !t.alwaysManual).length) },
-          { id: "mia", label: "Mia" },
+          { id: "mia", label: "Mia", badge: bang("mia") },
           { id: "produtos", label: "Produtos" },
-          { id: "precos", label: "Preços", badge: pill(quotes.filter((q) => q.status === "por_pedir").length) },
-          { id: "envios", label: "Envios", badge: pill(shipments.filter((s) => shipmentAlert({ status: s.status, lastEventAt: s.lastEventAt ? new Date(s.lastEventAt) : null, orderedAt: s.orderedAt ? new Date(s.orderedAt) : null })).length) },
-          { id: "faturas", label: "Faturas", badge: pill(invoices.issues.filter((i) => i.level === "alto").length) },
-          { id: "prazos", label: "Prazos e alertas", badge: pill(alerts.length) },
+          { id: "precos", label: "Preços", badge: withBang("precos", pill(quotes.filter((q) => q.status === "por_pedir").length)) },
+          { id: "envios", label: "Envios", badge: withBang("envios", pill(shipments.filter((s) => shipmentAlert({ status: s.status, lastEventAt: s.lastEventAt ? new Date(s.lastEventAt) : null, orderedAt: s.orderedAt ? new Date(s.orderedAt) : null })).length)) },
+          { id: "faturas", label: "Faturas", badge: withBang("faturas", pill(invoices.issues.filter((i) => i.level === "alto").length)) },
+          { id: "prazos", label: "Prazos e alertas", badge: withBang("prazos", pill(alerts.length), alerts.length > 0) },
           { id: "geral", label: "Visão geral" },
         ]}
       />
@@ -124,6 +133,9 @@ const GROUPS: { key: CaseGroup; label: string }[] = [
   { key: "rejeitado", label: "Rejeitados, a rever" },
   ...CS_STATUSES.filter((s) => s !== "para_aprovar").map((s) => ({ key: s as CaseGroup, label: CS_STATUS_LABEL[s] })),
 ];
+
+/** Grupos que esperam uma ação do Emanuel. */
+const YOURS = new Set<CaseGroup>(["pendente", "para_aprovar", "escalar", "reembolso"]);
 
 /** Um caso com decisão do Emanuel mas ainda por tratar deixa de contar como "para aprovar". */
 function groupOf(c: CsCaseView): CaseGroup {
@@ -172,13 +184,14 @@ function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean })
               setSelected(null);
             }}
             className={cn(
-              "rounded-lg border px-3 py-1.5 text-sm font-medium",
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium",
               status === s
                 ? "border-accent bg-accent/10 text-accent"
                 : "border-border text-muted-foreground hover:bg-muted",
             )}
           >
             {label} <span className="tabular-nums">({counts.get(s) ?? 0})</span>
+            {YOURS.has(s) && (counts.get(s) ?? 0) > 0 && <AttentionBang title="Precisa da sua decisão" />}
           </button>
         ))}
       </div>
