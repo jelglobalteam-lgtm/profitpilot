@@ -152,14 +152,23 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
           {data.issues.map((i, n) => (
             <li key={n} className={`flex items-start gap-2 ${i.level === "alto" ? "text-negative" : ""}`}><AttentionBang title="Aviso a ver" />
               <span className="flex-1">{i.message}</span>
-              {canEdit && i.invoiceId && (
+              {i.ask && (
+                <button
+                  type="button"
+                  onClick={() => { void navigator.clipboard.writeText(i.ask as string); }}
+                  className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+                >
+                  Copiar mensagem à {i.to}
+                </button>
+              )}
+              {canEdit && i.ask && i.invoiceId && (
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => start(async () => { await dismissCsInvoiceIssueAction({ id: i.invoiceId, message: i.message }); router.refresh(); })}
                   className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted disabled:opacity-50"
                 >
-                  Já vi, remover aviso
+                  Já enviei
                 </button>
               )}
             </li>
