@@ -10,7 +10,7 @@ import {
   type InvoiceKind,
 } from "@/lib/cs-invoices";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
-import { addCsInvoiceAction, checkMiaInvoiceAction, setCsInvoicePaidAction } from "./invoice-actions";
+import { addCsInvoiceAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
 
 function LineChecker({ canEdit }: { canEdit: boolean }) {
   const [fee, setFee] = useState("5");
@@ -150,7 +150,19 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
       {data.issues.length > 0 && (
         <ul className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
           {data.issues.map((i, n) => (
-            <li key={n} className={`flex items-start gap-2 ${i.level === "alto" ? "text-negative" : ""}`}><AttentionBang title="Aviso a ver" /><span>{i.message}</span></li>
+            <li key={n} className={`flex items-start gap-2 ${i.level === "alto" ? "text-negative" : ""}`}><AttentionBang title="Aviso a ver" />
+              <span className="flex-1">{i.message}</span>
+              {canEdit && i.invoiceId && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => start(async () => { await dismissCsInvoiceIssueAction({ id: i.invoiceId, message: i.message }); router.refresh(); })}
+                  className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                >
+                  Já vi, remover aviso
+                </button>
+              )}
+            </li>
           ))}
         </ul>
       )}

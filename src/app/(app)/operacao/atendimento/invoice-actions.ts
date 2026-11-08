@@ -111,3 +111,19 @@ export async function setCsInvoicePaidAction(input: { id: string; paid: boolean 
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
+
+/** Dispensa um aviso de uma fatura que o Emanuel já viu (não volta a aparecer nem a contar no aviso global). */
+export async function dismissCsInvoiceIssueAction(input: { id: string; message: string }): Promise<{ ok?: boolean; error?: string }> {
+  const { user, error } = await editorUser();
+  if (error) return { error };
+  if (!mongoose.isValidObjectId(input.id) || typeof input.message !== "string" || !input.message || input.message.length > 1000) {
+    return { error: "Dados inválidos." };
+  }
+  await connectToDatabase();
+  await CsInvoice.updateOne(
+    { _id: input.id, workspaceId: new mongoose.Types.ObjectId(user.workspaceId) },
+    { $addToSet: { dismissed: input.message } },
+  );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}

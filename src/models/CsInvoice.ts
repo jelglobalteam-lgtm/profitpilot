@@ -26,6 +26,8 @@ const CsInvoiceSchema = new Schema(
     periodTo: { type: Date, default: null },
     lines: { type: [LineSchema], default: [] },
     notes: { type: String, default: "" },
+    /** Avisos desta fatura que o Emanuel já viu e dispensou (texto do aviso). */
+    dismissed: { type: [String], default: [] },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true, collection: "cs_invoices" },

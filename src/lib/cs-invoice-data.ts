@@ -13,6 +13,7 @@ export async function loadInvoices(workspaceId: string) {
   const wid = new mongoose.Types.ObjectId(workspaceId);
   const docs = await CsInvoice.find({ workspaceId: wid, deletedAt: null }).sort({ issueDate: -1 }).lean<CsInvoiceDoc[]>();
   const invoices: InvoiceView[] = [];
+  const dismissed = new Map(docs.map((d) => [String(d._id), d.dismissed ?? []]));
   for (const d of docs) {
     let appSpend: number | null = null;
     if (d.kind === "agencia_google" && d.periodFrom && d.periodTo) {
@@ -42,6 +43,9 @@ export async function loadInvoices(workspaceId: string) {
       appSpend,
     });
   }
-  return { invoices, issues: [...missingInvoiceAlerts(invoices), ...checkInvoices(invoices)] };
+  const issues = [...missingInvoiceAlerts(invoices), ...checkInvoices(invoices)].filter(
+    (i) => !i.invoiceId || !(dismissed.get(i.invoiceId) ?? []).includes(i.message),
+  );
+  return { invoices, issues };
 }
 export type InvoiceData = Awaited<ReturnType<typeof loadInvoices>>;
