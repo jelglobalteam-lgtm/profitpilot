@@ -209,6 +209,19 @@ export async function setCsMiaStatusAction(
     { _id: p.data.id, workspaceId: new mongoose.Types.ObjectId(user.workspaceId) },
     { $set: { status: p.data.status } },
   );
+  // Ao enviar à Mia, o caso passa a aguardar o fornecedor.
+  if (p.data.status === "enviada") {
+    const msg = await CsMiaMessage.findById(p.data.id).select("caseId").lean();
+    if (msg?.caseId) {
+      const c = await CsCase.findOne({ _id: msg.caseId, workspaceId: new mongoose.Types.ObjectId(user.workspaceId) }).select("timeline").lean();
+      if (c) {
+        await CsCase.updateOne(
+          { _id: msg.caseId },
+          { $set: { status: "a_aguardar_fornecedor" }, $push: { timeline: { at: new Date(), n: ((c.timeline ?? []).length as number) + 1, summary: "Pedido enviado à Mia. A aguardar resposta." } } },
+        );
+      }
+    }
+  }
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
