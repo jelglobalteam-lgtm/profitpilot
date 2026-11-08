@@ -136,3 +136,14 @@ export type CsMiaMessageView = {
   followUp: string;
   createdAt: string;
 };
+
+/** Ações rápidas num caso (atalho de teclado entre parênteses na interface). */
+export const CS_QUICK_ACTIONS = [
+  { key: "imagens", label: "Pediu imagens", shortcut: "A", status: "a_aguardar_cliente" },
+  { key: "desconto", label: "Ofereceu desconto", shortcut: "O", status: "a_aguardar_cliente" },
+  { key: "estado", label: "Informou estado", shortcut: "I", status: "respondido" },
+  { key: "morada", label: "Enviou morada de devolução", shortcut: "S", status: "a_aguardar_cliente" },
+  { key: "recusou", label: "Recusou", shortcut: "D", status: "respondido" },
+  { key: "reembolsou", label: "Reembolsou", shortcut: "F", status: "resolvido" },
+] as const;
+export type CsQuickActionKey = (typeof CS_QUICK_ACTIONS)[number]["key"];

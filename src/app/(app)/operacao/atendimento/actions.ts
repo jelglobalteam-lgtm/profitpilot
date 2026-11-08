@@ -11,6 +11,7 @@ import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
 import { CsMiaMessage } from "@/models/CsMiaMessage";
 import { CsEvent } from "@/models/CsEvent";
+import { CS_QUICK_ACTIONS } from "@/lib/cs-types";
 
 type Result = { ok?: boolean; error?: string };
 
@@ -208,6 +209,37 @@ export async function setCsMiaStatusAction(
     { _id: p.data.id, workspaceId: new mongoose.Types.ObjectId(user.workspaceId) },
     { $set: { status: p.data.status } },
   );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}
+
+const quickSchema = z.object({
+  caseId: z.string().min(1),
+  action: z.enum(CS_QUICK_ACTIONS.map((a) => a.key) as [string, ...string[]]),
+});
+
+/** Regista uma ação já feita no caso (no email ou na Shopify): entra na cronologia e atualiza o estado. */
+export async function quickCsActionAction(input: z.infer<typeof quickSchema>): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  const p = quickSchema.safeParse(input);
+  if (!p.success || !oid(p.data.caseId)) return { error: "Dados inválidos." };
+  const def = CS_QUICK_ACTIONS.find((a) => a.key === p.data.action);
+  if (!def) return { error: "Ação desconhecida." };
+  await connectToDatabase();
+  const wid = new mongoose.Types.ObjectId(user.workspaceId);
+  const c = await CsCase.findOne({ _id: p.data.caseId, workspaceId: wid });
+  if (!c) return { error: "Caso não encontrado." };
+  c.timeline.push({ n: c.timeline.length + 1, at: new Date(), summary: def.label });
+  c.status = def.status;
+  await c.save();
+  await CsEvent.create({
+    workspaceId: wid,
+    caseId: c._id,
+    type: `acao:${def.key}`,
+    note: def.label,
+    actorId: new mongoose.Types.ObjectId(user.id),
+  });
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
