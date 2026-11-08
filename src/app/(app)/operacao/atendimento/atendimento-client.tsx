@@ -339,7 +339,10 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => setDialog("rejeitado")}
+            onClick={() => {
+              if (decisionText.trim() && !reason) setReason(decisionText.trim());
+              setDialog("rejeitado");
+            }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             Rejeitar
@@ -347,7 +350,10 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => setDialog("escalado")}
+            onClick={() => {
+              if (decisionText.trim() && !reason) setReason(decisionText.trim());
+              setDialog("escalado");
+            }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             Escalar
