@@ -47,8 +47,9 @@ export function ShipmentsTab({ shipments, canEdit }: { shipments: ShipmentView[]
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        No Parcel Panel, em Pedidos, use Exportar e carregue aqui o CSV. Deve fazê-lo todos os dias: os envios
-        exceção, com tentativa falhada ou parados aparecem como alertas.
+        A exportação de CSV do Parcel Panel só existe no plano Profissional. Com esse plano, em Pedidos, use
+        Exportar e carregue aqui o CSV todos os dias: os envios em exceção, com tentativa falhada ou parados
+        aparecem como alertas. No plano Essencial a rotina diária lê os estados no Parcel Panel.
         {lastImport && ` Última importação: ${day(lastImport)}.`}
       </p>
       {canEdit && (
