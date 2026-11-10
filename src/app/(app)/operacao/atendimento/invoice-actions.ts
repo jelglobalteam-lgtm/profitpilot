@@ -129,10 +129,8 @@ export async function dismissCsInvoiceIssueAction(input: { id: string; message: 
   return { ok: true };
 }
 
-export type PdfFields = { number?: string; issueDate?: string; amount?: string; quantity?: string; orderFrom?: string; orderTo?: string };
-
-/** Lê o PDF de uma fatura da Mia e devolve os campos encontrados para o Emanuel conferir. Não grava nada. */
-export async function readInvoicePdfAction(formData: FormData): Promise<{ fields?: PdfFields; error?: string }> {
+/** Lê o PDF (ou zip) de uma fatura de imposto da Mia, regista-a e marca o ficheiro como lido. Sem preenchimentos manuais. */
+export async function importInvoicePdfAction(formData: FormData): Promise<{ saved?: string; info?: string; error?: string }> {
   const { user, error } = await editorUser();
   if (error) return { error };
   const file = formData.get("file");
@@ -149,39 +147,45 @@ export async function readInvoicePdfAction(formData: FormData): Promise<{ fields
       bytes = entries[name];
     }
     const pdf = await getDocumentProxy(bytes);
-    const out = await extractText(pdf, { mergePages: true });
-    text = out.text;
+    text = (await extractText(pdf, { mergePages: true })).text;
   } catch {
-    return { error: "Não consegui ler o PDF. Preencha os campos à mão." };
+    return { error: "Não consegui ler o ficheiro." };
   }
-  if (text.trim()) {
-    await connectToDatabase();
-    await CsInvoiceUpload.create({
-      workspaceId: new mongoose.Types.ObjectId(user.workspaceId),
-      fileName: file.name.slice(0, 200),
-      text: text.slice(0, 60_000),
-      uploadedBy: new mongoose.Types.ObjectId(user.id),
-    });
-    revalidatePath("/operacao/atendimento");
-  }
+  if (!text.trim()) return { error: "O ficheiro não tem texto legível." };
+  await connectToDatabase();
+  const wid = new mongoose.Types.ObjectId(user.workspaceId);
   const flat = text.replace(/\s+/g, " ");
-  const fields: PdfFields = {};
-  const number = flat.match(/WWLLY\s?\d{8}\s?[A-Z]?\s?\d{1,3}(?:-TPB)?/i);
-  if (number) fields.number = number[0].replace(/\s+/g, " ").trim();
-  const iso = flat.match(/(\d{4})-(\d{2})-(\d{2})/);
-  const pt = flat.match(/(\d{2})[/.](\d{2})[/.](\d{4})/);
-  if (iso) fields.issueDate = iso[0];
-  else if (pt) fields.issueDate = `${pt[3]}-${pt[2]}-${pt[1]}`;
-  const amount = flat.match(/Total Amount\D{0,20}(\d+(?:[.,]\d{1,2})?)/i);
-  if (amount) fields.amount = amount[1].replace(",", ".");
-  const range = flat.match(/#?(\d{4})(?:-A)?\s*(?:to|-|–)\s*#?(\d{4})(?:-A)?/i);
-  if (range) {
-    fields.orderFrom = range[1];
-    fields.orderTo = range[2];
+  const number = flat.match(/Invoice No\s+(WWLLY\d{8}[A-Z]\d{1,3})\s*(-TPB)?/i);
+  const date = flat.match(/Invoice Date\s+(\d{4}-\d{2}-\d{2})/i);
+  const range = flat.match(/Orders range\s+#?(\d{4})(?:-[A-Z])?\s*-\s*#?(\d{4})/i);
+  const qty = flat.match(/Orders quantity\s+(\d{1,4})/i);
+  const amount = flat.match(/EU Customs Duty\s*€\s*(\d+(?:[.,]\d{1,2})?)/i);
+  const upload = await CsInvoiceUpload.create({
+    workspaceId: wid,
+    fileName: file.name.slice(0, 200),
+    text: text.slice(0, 60_000),
+    uploadedBy: new mongoose.Types.ObjectId(user.id),
+  });
+  if (!number || !date || !amount) {
+    revalidatePath("/operacao/atendimento");
+    return { info: "Fatura recebida. A rotina lê-a e regista-a na próxima execução." };
   }
-  const qty = flat.match(/(?:Quantity|Qty|Orders?)\D{0,15}(\d{1,4})\b/i);
-  if (qty) fields.quantity = qty[1];
-  else if (range) fields.quantity = String(Number(range[2]) - Number(range[1]) + 1);
-  if (Object.keys(fields).length === 0) return { error: "Fatura recebida. Não reconheci os campos, por isso a rotina vai lê-la e registá-la; também pode preenchê-los à mão." };
-  return { fields };
+  const full = `${number[1]}${number[2] ?? ""}`.toUpperCase();
+  const existing = await CsInvoice.findOne({ workspaceId: wid, kind: "mia_imposto", number: full, deletedAt: null }).select("_id").lean();
+  if (!existing) {
+    await CsInvoice.create({
+      workspaceId: wid,
+      kind: "mia_imposto",
+      number: full,
+      issueDate: new Date(date[1]),
+      currency: "EUR",
+      amount: Number(amount[1].replace(",", ".")),
+      quantity: qty ? Number(qty[1]) : range ? Number(range[2]) - Number(range[1]) + 1 : null,
+      orderFrom: range ? Number(range[1]) : null,
+      orderTo: range ? Number(range[2]) : null,
+    });
+  }
+  await CsInvoiceUpload.updateOne({ _id: upload._id }, { $set: { status: "lida" } });
+  revalidatePath("/operacao/atendimento");
+  return { saved: existing ? `${full} já estava registada.` : `Fatura ${full} registada.` };
 }

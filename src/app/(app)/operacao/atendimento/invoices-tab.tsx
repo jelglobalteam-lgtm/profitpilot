@@ -10,7 +10,7 @@ import {
   type InvoiceKind,
 } from "@/lib/cs-invoices";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
-import { addCsInvoiceAction, readInvoicePdfAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
+import { addCsInvoiceAction, importInvoicePdfAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
 
 function LineChecker({ canEdit }: { canEdit: boolean }) {
   const [fee, setFee] = useState("5");
@@ -260,11 +260,12 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
                     const fd = new FormData();
                     fd.append("file", pdf);
                     start(async () => {
-                      const r = await readInvoicePdfAction(fd);
+                      const r = await importInvoicePdfAction(fd);
                       if (r.error) setError(r.error);
-                      else if (r.fields) {
-                        setF((x) => ({ ...x, ...r.fields }));
-                        setError("Fatura recebida; a rotina também a lê e regista. Confira os campos antes de guardar.");
+                      else {
+                        setError(r.saved ?? r.info ?? null);
+                        setPdf(null);
+                        router.refresh();
                       }
                     });
                   }}
@@ -272,9 +273,11 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
                   {pending ? "A ler..." : "Importar fatura"}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">PDF (ou zip) da Mia. Preenche os campos; confira sempre antes de guardar.</p>
+              <p className="text-xs text-muted-foreground">PDF (ou zip) da Mia. A fatura é lida e registada logo; o saldo vem da conversa da Mia.</p>
             </div>
           )}
+          {kind !== "mia_imposto" && (
+            <>
           <div className="grid gap-2 sm:grid-cols-2">
             <input className={input} placeholder={kind === "mia_recarga" ? "Referência" : "Número da fatura"} value={f.number ?? ""} onChange={set("number")} />
             <input className={input} type="date" title="Data" value={f.issueDate ?? ""} onChange={set("issueDate")} />
@@ -285,14 +288,6 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
                 <input className={input} placeholder="Moeda (USD)" value={f.currency ?? ""} onChange={set("currency")} />
                 <input className={input} type="date" title="Período de" value={f.periodFrom ?? ""} onChange={set("periodFrom")} />
                 <input className={input} type="date" title="Período até" value={f.periodTo ?? ""} onChange={set("periodTo")} />
-              </>
-            )}
-            {kind === "mia_imposto" && (
-              <>
-                <input className={input} placeholder="N.º de encomendas" value={f.quantity ?? ""} onChange={set("quantity")} />
-                <input className={input} placeholder="Encomenda inicial (ex. 1058)" value={f.orderFrom ?? ""} onChange={set("orderFrom")} />
-                <input className={input} placeholder="Encomenda final (ex. 1079)" value={f.orderTo ?? ""} onChange={set("orderTo")} />
-                <input className={input} placeholder="Saldo que a Mia indica (All left)" value={f.miaBalance ?? ""} onChange={set("miaBalance")} />
               </>
             )}
           </div>
@@ -308,7 +303,9 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
           <button type="button" disabled={pending} onClick={save} className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50">
             Guardar fatura
           </button>
-          {error && <p className="text-sm text-negative">{error}</p>}
+            </>
+          )}
+          {error && <p className={error.startsWith("Fatura") ? "text-sm text-muted-foreground" : "text-sm text-negative"}>{error}</p>}
         </div>
       )}
 
