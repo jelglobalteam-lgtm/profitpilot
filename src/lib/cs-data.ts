@@ -34,10 +34,10 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     complaintReason: d.complaintReason ?? "",
     orderValue: d.orderValue ?? "",
     trackingStatus: d.trackingStatus ?? "",
-    timeline: (d.timeline ?? []).map((t) => ({
-      n: t.n,
+    timeline: (d.timeline ?? []).map((t, i) => ({
+      n: t.n || i + 1,
       at: t.at ? new Date(t.at).toISOString() : null,
-      summary: t.summary ?? "",
+      summary: t.summary || t.text || "",
     })),
     offered: d.offered ?? "",
     requests: d.requests ?? "",
