@@ -124,10 +124,11 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
 
 /* ---------------------------------- Casos --------------------------------- */
 
-type CaseGroup = CsStatus | "aprovado" | "rejeitado" | "pendente";
+type CaseGroup = CsStatus | "aprovado" | "rejeitado" | "pendente" | "moradas";
 
 const GROUPS: { key: CaseGroup; label: string }[] = [
   { key: "pendente", label: "Pendentes de si" },
+  { key: "moradas", label: "Moradas" },
   { key: "para_aprovar", label: CS_STATUS_LABEL.para_aprovar },
   { key: "aprovado", label: "Aprovados, a enviar" },
   { key: "rejeitado", label: "Rejeitados, a rever" },
@@ -147,6 +148,11 @@ function groupOf(c: CsCaseView): CaseGroup {
   return c.status;
 }
 
+/** Pedidos de confirmação ou alteração de morada ainda em aberto (a corrigir antes do envio). */
+function isAddress(c: CsCaseView): boolean {
+  return c.issueType === "alteracao_morada" && c.status !== "resolvido" && c.status !== "respondido";
+}
+
 /** Casos que esperam uma decisão do Emanuel: para aprovar, escalados e reembolsos. */
 function isPending(c: CsCaseView): boolean {
   const g = groupOf(c);
@@ -163,12 +169,13 @@ function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean })
     for (const c of cases) {
       m.set(groupOf(c), (m.get(groupOf(c)) ?? 0) + 1);
       if (isPending(c)) m.set("pendente", (m.get("pendente") ?? 0) + 1);
+      if (isAddress(c)) m.set("moradas", (m.get("moradas") ?? 0) + 1);
     }
     return m;
   }, [cases]);
 
   const list = cases.filter(
-    (c) => (status === "pendente" ? isPending(c) : groupOf(c) === status) && (store === "all" || c.store === store),
+    (c) => (status === "pendente" ? isPending(c) : status === "moradas" ? isAddress(c) : groupOf(c) === status) && (store === "all" || c.store === store),
   );
   const current = cases.find((c) => c.id === selected) ?? null;
 
