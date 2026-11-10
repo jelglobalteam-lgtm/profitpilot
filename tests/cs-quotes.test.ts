@@ -74,3 +74,13 @@ test("mensagem à Mia em bloco: uma só saudação", async () => {
   assert.equal(two.match(/Hi Mia/g)?.length, 1);
   assert.ok(two.includes("1. Question A.") && two.includes("2. Question B."));
 });
+
+test("exportação do WhatsApp: ordem mês/dia, PM e datas futuras", async () => {
+  const { parseWhatsAppExport } = await import("../src/lib/cs-whatsapp.ts");
+  const now = new Date("2026-11-10T01:00:00Z");
+  const us = parseWhatsAppExport("11/8/26, 2:05 PM - Mia: a\n11/13/26, 1:00 AM - Mia: b", now);
+  assert.equal(us[0].at.toISOString(), "2026-11-08T14:05:00.000Z");
+  assert.equal(us.length, 1);
+  const eu = parseWhatsAppExport("08/11/2026, 14:05 - Mia: a\n13/10/2026, 09:00 - Mia: b", now);
+  assert.equal(eu[0].at.toISOString(), "2026-11-08T14:05:00.000Z");
+});
