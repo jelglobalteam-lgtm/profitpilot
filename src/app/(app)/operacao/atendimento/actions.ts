@@ -7,6 +7,8 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import { roleRank } from "@/lib/rbac";
+import { parseWhatsAppExport, whatsAppSenders } from "@/lib/cs-whatsapp";
+import { CsMiaCoverage } from "@/models/CsMiaCoverage";
 import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
 import { CsMiaMessage } from "@/models/CsMiaMessage";
@@ -255,4 +257,34 @@ export async function quickCsActionAction(input: z.infer<typeof quickSchema>): P
   });
   revalidatePath("/operacao/atendimento");
   return { ok: true };
+}
+
+/** Importa a conversa da Mia (ficheiro .txt exportado do WhatsApp): grava as mensagens novas da Mia e atualiza até onde está lida. */
+export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; until?: string }> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  if (typeof input.text !== "string" || input.text.length === 0 || input.text.length > 5_000_000) return { error: "Ficheiro inválido." };
+  const messages = parseWhatsAppExport(input.text);
+  if (messages.length === 0) return { error: "Não encontrei mensagens. Exporte a conversa em .txt, sem multimédia." };
+  const name = (input.miaName ?? "").trim().toLowerCase();
+  if (!name) return { senders: whatsAppSenders(messages) };
+  await connectToDatabase();
+  const wid = new mongoose.Types.ObjectId(user.workspaceId);
+  const cov = await CsMiaCoverage.findOne({ workspaceId: wid }).lean<{ coveredUntil: Date | null } | null>();
+  const since = cov?.coveredUntil ? cov.coveredUntil.getTime() : 0;
+  const fresh = messages.filter((m) => m.at.getTime() > since);
+  const fromMia = fresh.filter((m) => m.sender.toLowerCase() === name);
+  if (fromMia.length) {
+    await CsMiaMessage.insertMany(
+      fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, createdAt: m.at })),
+    );
+  }
+  const last = messages.reduce((a, m) => (m.at > a ? m.at : a), messages[0].at);
+  await CsMiaCoverage.updateOne(
+    { workspaceId: wid },
+    { $set: { coveredUntil: last }, $setOnInsert: { coveredFrom: messages[0].at } },
+    { upsert: true },
+  );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true, imported: fromMia.length, until: last.toISOString() };
 }

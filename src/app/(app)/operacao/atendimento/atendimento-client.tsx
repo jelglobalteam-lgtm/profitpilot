@@ -29,6 +29,7 @@ import { shipmentAlert, type ShipmentView } from "@/lib/parcelpanel-csv";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
   addCsMiaMessageAction,
+  importMiaChatAction,
   closeCsCaseAction,
   decideCsCaseAction,
   saveCsTemplateAction,
@@ -617,6 +618,7 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Pedidos da Mia</h2>
+        {canEdit && <MiaChatImport />}
         {canEdit && (
           <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
             <textarea
@@ -652,6 +654,43 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
         ))}
       </section>
       {error && <p className="text-sm text-negative lg:col-span-2">{error}</p>}
+    </div>
+  );
+}
+
+function MiaChatImport() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [text, setText] = useState("");
+  const [senders, setSenders] = useState<string[]>([]);
+  const [msg, setMsg] = useState("");
+  const send = (name: string) =>
+    start(async () => {
+      const r = await importMiaChatAction({ text, miaName: name });
+      if (r.error) setMsg(r.error);
+      else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
+      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT")}.`); router.refresh(); }
+    });
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
+      <p className="font-medium">Importar a conversa da Mia</p>
+      <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro .txt.</p>
+      <input
+        type="file"
+        accept=".txt,text/plain"
+        onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(await f.text()); setSenders([]); setMsg("Ficheiro lido. Carregue em Importar."); } }}
+        className="block text-xs"
+      />
+      {senders.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {senders.map((n) => (
+            <button key={n} type="button" disabled={pending} onClick={() => send(n)} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">{n}</button>
+          ))}
+        </div>
+      ) : (
+        <button type="button" disabled={pending || !text} onClick={() => send("")} className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50">Importar</button>
+      )}
+      {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
     </div>
   );
 }
