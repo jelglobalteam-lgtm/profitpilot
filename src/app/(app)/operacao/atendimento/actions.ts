@@ -9,6 +9,7 @@ import { connectToDatabase } from "@/lib/db";
 import { roleRank } from "@/lib/rbac";
 import { parseWhatsAppExport, parseMiaInvoiceNotes, whatsAppSenders } from "@/lib/cs-whatsapp";
 import { CsInvoice } from "@/models/CsInvoice";
+import { CsMiaInvoiceNote } from "@/models/CsMiaInvoiceNote";
 import { CsMiaCoverage } from "@/models/CsMiaCoverage";
 import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
@@ -293,6 +294,11 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   const notes = parseMiaInvoiceNotes(messages, input.miaName);
   const missing: string[] = [];
   for (const n of notes) {
+    await CsMiaInvoiceNote.updateOne(
+      { workspaceId: wid, number: n.number },
+      { $set: { amount: n.amount, balance: n.balance, announcedAt: n.at } },
+      { upsert: true },
+    );
     const found = await CsInvoice.findOne({ workspaceId: wid, kind: "mia_imposto", number: new RegExp(`^${n.number}`, "i"), deletedAt: null }).select("_id").lean();
     if (!found) {
       missing.push(n.number);

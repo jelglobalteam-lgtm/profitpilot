@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { AdCampaignDay } from "@/models/AdCampaignDay";
 import { CsInvoice, type CsInvoiceDoc } from "@/models/CsInvoice";
-import { checkInvoices, missingInvoiceAlerts, type InvoiceKind, type InvoiceView } from "@/lib/cs-invoices";
+import { CsMiaInvoiceNote } from "@/models/CsMiaInvoiceNote";
+import { checkInvoices, missingInvoiceAlerts, type InvoiceIssue, type InvoiceKind, type InvoiceView } from "@/lib/cs-invoices";
 
 const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : null);
 const key = (d: Date) => d.toISOString().slice(0, 10);
@@ -43,7 +44,15 @@ export async function loadInvoices(workspaceId: string) {
       appSpend,
     });
   }
-  const issues = [...missingInvoiceAlerts(invoices), ...checkInvoices(invoices)].filter(
+  const notes = await CsMiaInvoiceNote.find({ workspaceId: wid }).lean<{ number: string; amount: number | null }[]>();
+  const announced = notes
+    .filter((n) => !invoices.some((i) => i.kind === "mia_imposto" && i.number.toUpperCase().startsWith(n.number.toUpperCase())))
+    .map((n): InvoiceIssue => ({
+      invoiceId: "",
+      level: "alto",
+      message: `A Mia enviou na conversa a fatura ${n.number}${n.amount != null ? ` (${n.amount} €)` : ""} e ainda não foi importada. Importe o PDF.`,
+    }));
+  const issues = [...announced, ...missingInvoiceAlerts(invoices), ...checkInvoices(invoices)].filter(
     (i) => !i.invoiceId || !(dismissed.get(i.invoiceId) ?? []).includes(i.message),
   );
   return { invoices, issues };
