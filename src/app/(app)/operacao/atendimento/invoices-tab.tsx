@@ -30,6 +30,15 @@ function LineChecker({ canEdit }: { canEdit: boolean }) {
         Imposto por encomenda (€)
         <input className="w-20 rounded-md border border-border bg-background px-2 py-1" value={fee} onChange={(e) => setFee(e.target.value)} />
       </label>
+      <input
+        type="file"
+        accept=".txt,.csv,text/plain,text/csv"
+        className="block text-xs"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) setText(await file.text());
+        }}
+      />
       <textarea
         rows={8}
         className="w-full rounded-md border border-border bg-background p-2 font-mono text-sm"
