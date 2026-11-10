@@ -547,11 +547,13 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
   const { run, pending, error } = useRun();
   const [copied, setCopied] = useState(false);
   const questions = messages.filter((m) => m.direction === "pergunta");
-  const dayAgo = Date.now() - 86_400_000;
-  // Por enviar: rascunhos e perguntas sem resposta há mais de 1 dia (voltar a perguntar), numa só mensagem.
-  const toSend = questions.filter((m) => m.status === "rascunho" || (m.status === "enviada" && new Date(m.updatedAt).getTime() < dayAgo));
+  const staleAt = Date.now() - 18 * 3_600_000;
+  // Por enviar: perguntas novas e lembretes (sem resposta há mais de 18 h), numa só mensagem.
+  const fresh = questions.filter((m) => m.status === "rascunho");
+  const reminders = questions.filter((m) => m.status === "enviada" && new Date(m.updatedAt).getTime() < staleAt);
+  const toSend = [...fresh, ...reminders];
   const waiting = questions.filter((m) => m.status === "enviada" && !toSend.includes(m));
-  const text = miaBatchMessage(toSend.map((m) => m.textEn));
+  const text = miaBatchMessage(fresh.map((m) => m.textEn), reminders.map((m) => m.textEn));
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">

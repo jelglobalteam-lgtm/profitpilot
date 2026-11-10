@@ -20,7 +20,7 @@ export const CS_RULES = {
   /** Risco de disputa/chargeback para encomendas abertas ha mais de N dias. */
   riscoDisputaDia: 8,
   /** Pergunta/pedido a Mia sem resposta: seguir passadas N horas; escalar passadas N horas. */
-  miaSeguirH: 24,
+  miaSeguirH: 18,
   miaEscalarH: 48,
   /** Rascunho para a Mia por enviar. */
   miaRascunhoH: 4,
@@ -103,7 +103,8 @@ export function computeCsAlerts(
       });
     }
 
-    if (c.status === "para_aprovar") {
+    // Só está à espera do Emanuel se ainda não decidiu; se já aprovou, falta o envio (rotina).
+    if (c.status === "para_aprovar" && !c.decision) {
       if (sinceUpdateH > R.respostaLimiteH) {
         out.push({
           id: `${c.id}:resp`,
@@ -244,7 +245,7 @@ export function computeCsAlerts(
         refId: m.id,
         title: `${tag} sem resposta da Mia`,
         detail: `Enviada ha ${Math.floor(ageH)} h: ${preview}`,
-        action: "Seguir com mensagem curta, agrupando pendentes.",
+        action: "Lembrete preparado no separador Mia: copie e envie.",
       });
     }
   }

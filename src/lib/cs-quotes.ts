@@ -82,13 +82,19 @@ export function miaPriceIncreaseMessage(i: { title: string; link: string; from: 
   ].join("\n\n");
 }
 
-/** Junta várias perguntas à Mia numa só mensagem, com uma única saudação e um único agradecimento. */
-export function miaBatchMessage(texts: string[]): string {
-  const bodies = texts
-    .map((t) => t.trim().replace(/^Hi( Mia)?,?\s*/i, "").replace(/\s*Thank you\.?\s*$/i, "").trim())
-    .filter(Boolean)
-    .map((b) => b.charAt(0).toUpperCase() + b.slice(1));
-  if (bodies.length === 0) return "";
-  if (bodies.length === 1) return `Hi Mia,\n\n${bodies[0]}\n\nThank you.`;
-  return `Hi Mia, a few questions:\n\n${bodies.map((b, i) => `${i + 1}. ${b}`).join("\n\n")}\n\nThank you.`;
+/** Junta perguntas novas e lembretes à Mia numa só mensagem, com uma única saudação e um único agradecimento. */
+export function miaBatchMessage(texts: string[], reminders: string[] = []): string {
+  const clean = (list: string[]) =>
+    list
+      .map((t) => t.trim().replace(/^Hi( Mia)?,?\s*/i, "").replace(/\s*Thank you\.?\s*$/i, "").trim())
+      .filter(Boolean)
+      .map((b) => b.charAt(0).toUpperCase() + b.slice(1));
+  const news = clean(texts);
+  const old = clean(reminders);
+  if (news.length === 0 && old.length === 0) return "";
+  const list = (l: string[]) => (l.length === 1 ? l[0] : l.map((b, i) => `${i + 1}. ${b}`).join("\n\n"));
+  const parts: string[] = [];
+  if (news.length) parts.push(news.length === 1 ? news[0] : `A few questions:\n\n${list(news)}`);
+  if (old.length) parts.push(`${news.length ? "Also, a" : "A"} gentle reminder, I'm still waiting for your answer on ${old.length === 1 ? "my earlier question" : "my earlier questions"}:\n\n${list(old)}`);
+  return `Hi Mia,\n\n${parts.join("\n\n")}\n\nThank you.`;
 }

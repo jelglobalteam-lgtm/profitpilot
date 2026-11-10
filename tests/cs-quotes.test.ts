@@ -73,6 +73,8 @@ test("mensagem à Mia em bloco: uma só saudação", async () => {
   const two = miaBatchMessage(["Hi Mia, question A. Thank you.", "Hi Mia, question B."]);
   assert.equal(two.match(/Hi Mia/g)?.length, 1);
   assert.ok(two.includes("1. Question A.") && two.includes("2. Question B."));
+  const rem = miaBatchMessage([], ["Hi Mia, size change on #1081."]);
+  assert.ok(rem.includes("gentle reminder") && rem.includes("Size change on #1081."));
 });
 
 test("exportação do WhatsApp: ordem mês/dia, PM e datas futuras", async () => {
