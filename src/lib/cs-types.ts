@@ -41,6 +41,7 @@ export const CS_ISSUE_TYPES = [
   "alteracao_morada",
   "reembolso",
   "disputa",
+  "gdpr",
   "outro",
 ] as const;
 export type CsIssueType = (typeof CS_ISSUE_TYPES)[number];
@@ -55,6 +56,7 @@ export const CS_ISSUE_LABEL: Record<CsIssueType, string> = {
   alteracao_morada: "Alteração de morada",
   reembolso: "Reembolso",
   disputa: "Disputa / chargeback",
+  gdpr: "GDPR / Dados pessoais",
   outro: "Outro",
 };
 
