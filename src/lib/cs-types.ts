@@ -136,6 +136,7 @@ export type CsMiaMessageView = {
   textEn: string;
   reply: string;
   followUp: string;
+  reviewed: boolean;
   createdAt: string;
 };
 

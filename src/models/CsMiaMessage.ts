@@ -20,6 +20,8 @@ const CsMiaMessageSchema = new Schema(
     textEn: { type: String, default: "" },
     reply: { type: String, default: "" },
     followUp: { type: String, default: "" },
+    /** Respostas importadas da conversa: false até o Emanuel as rever. */
+    reviewed: { type: Boolean, default: true },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true, collection: "cs_mia_messages" },

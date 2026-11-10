@@ -276,7 +276,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   const fromMia = fresh.filter((m) => m.sender.toLowerCase() === name);
   if (fromMia.length) {
     await CsMiaMessage.insertMany(
-      fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, createdAt: m.at })),
+      fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, reviewed: false, createdAt: m.at })),
     );
   }
   const last = messages.reduce((a, m) => (m.at > a ? m.at : a), messages[0].at);
@@ -287,4 +287,17 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   );
   revalidatePath("/operacao/atendimento");
   return { ok: true, imported: fromMia.length, until: last.toISOString() };
+}
+
+/** Marca como revistas as respostas da Mia importadas (depois de ver se resolvem perguntas pendentes ou trazem pedidos novos). */
+export async function reviewMiaRepliesAction(): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  await connectToDatabase();
+  await CsMiaMessage.updateMany(
+    { workspaceId: new mongoose.Types.ObjectId(user.workspaceId), direction: "pedido", reviewed: false },
+    { $set: { reviewed: true } },
+  );
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
 }

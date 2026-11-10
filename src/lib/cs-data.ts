@@ -83,6 +83,7 @@ function toMiaView(d: CsMiaMessageDoc): CsMiaMessageView {
     textEn: d.textEn ?? "",
     reply: d.reply ?? "",
     followUp: d.followUp ?? "",
+    reviewed: d.reviewed !== false,
     createdAt: new Date(d.createdAt).toISOString(),
   };
 }

@@ -30,6 +30,7 @@ import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/c
 import {
   addCsMiaMessageAction,
   importMiaChatAction,
+  reviewMiaRepliesAction,
   closeCsCaseAction,
   decideCsCaseAction,
   saveCsTemplateAction,
@@ -644,6 +645,12 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
             </button>
           </div>
         )}
+        {canEdit && requests.some((m) => !m.reviewed) && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm">
+            <span>Há respostas novas da Mia. Reveja se respondem a perguntas pendentes ou trazem pedidos novos.</span>
+            <button type="button" disabled={pending} onClick={() => run(() => reviewMiaRepliesAction())} className="shrink-0 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">Já revi</button>
+          </div>
+        )}
         {requests.map((m) => (
           <div key={m.id} className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
             <p className="whitespace-pre-wrap">{m.reply}</p>
@@ -669,7 +676,7 @@ function MiaChatImport() {
       const r = await importMiaChatAction({ text, miaName: name });
       if (r.error) setMsg(r.error);
       else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
-      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT")}.`); router.refresh(); }
+      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT")}.`); router.refresh(); }
     });
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
