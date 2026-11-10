@@ -2,7 +2,7 @@
 
 import { miaBatchMessage } from "@/lib/cs-quotes";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { PageTabs } from "@/components/page-tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -70,6 +70,10 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
   const [tab, setTab] = useState(
     ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab ?? "") ? (initialTab as string) : "casos",
   );
+  // Ao carregar na faixa de pendentes já dentro do Atendimento, o endereço muda (?tab=) mas o componente mantém-se: seguir o separador pedido.
+  useEffect(() => {
+    if (initialTab && ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab)) setTab(initialTab);
+  }, [initialTab]);
   const open = data.cases.filter((c) => c.status !== "resolvido" && c.status !== "respondido");
   const alerts = useMemo(() => computeCsAlerts(data.cases, data.mia), [data.cases, data.mia]);
   const pill = (n: number) =>
