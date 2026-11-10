@@ -587,10 +587,10 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
               {m.textEn && (
                 <button
                   type="button"
-                  onClick={() => { void navigator.clipboard.writeText(m.textEn); if (canEdit && m.status === "rascunho") run(() => setCsMiaStatusAction({ id: m.id, status: "enviada" })); }}
+                  onClick={() => { void navigator.clipboard.writeText(m.textEn); if (canEdit && m.status !== "respondida") run(() => setCsMiaStatusAction({ id: m.id, status: "enviada" })); }}
                   className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
                 >
-                  Copiar para a Mia
+                  {m.status === "enviada" ? "Voltar a perguntar (copiar)" : "Copiar para a Mia"}
                 </button>
               )}
               <span className="text-xs text-muted-foreground">Estado:</span>
