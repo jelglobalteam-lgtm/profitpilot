@@ -245,7 +245,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
             <div className="space-y-1">
               <input
                 type="file"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,.pdf,.zip,application/zip"
                 className="block text-xs"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -263,7 +263,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
                   });
                 }}
               />
-              <p className="text-xs text-muted-foreground">Carregue o PDF da Mia para preencher os campos; confira sempre antes de guardar.</p>
+              <p className="text-xs text-muted-foreground">Carregue o PDF (ou o zip) da Mia para preencher os campos; confira sempre antes de guardar.</p>
             </div>
           )}
           <div className="grid gap-2 sm:grid-cols-2">

@@ -139,7 +139,15 @@ export async function readInvoicePdfAction(formData: FormData): Promise<{ fields
   let text = "";
   try {
     const { extractText, getDocumentProxy } = await import("unpdf");
-    const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+    let bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+      const { unzipSync } = await import("fflate");
+      const entries = unzipSync(bytes);
+      const name = Object.keys(entries).find((n) => n.toLowerCase().endsWith(".pdf"));
+      if (!name) return { error: "O zip não tem nenhum PDF." };
+      bytes = entries[name];
+    }
+    const pdf = await getDocumentProxy(bytes);
     const out = await extractText(pdf, { mergePages: true });
     text = out.text;
   } catch {
