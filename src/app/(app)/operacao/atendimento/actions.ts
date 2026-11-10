@@ -51,15 +51,18 @@ export async function decideCsCaseAction(
   if (!c) return { error: "Caso não encontrado." };
 
   const { decision, note, editedReply } = p.data;
-  c.decision = decision;
-  c.managerNote = note;
-  c.decidedAt = new Date();
-  c.decidedBy = new mongoose.Types.ObjectId(user.id);
-  if (decision === "aprovado_com_edicao" && editedReply) c.proposedReply = editedReply;
-  if (decision === "escalado") c.status = "escalar";
-  else if (decision === "rejeitado") c.status = "para_aprovar";
-  else c.status = c.status === "reembolso" ? "reembolso" : "para_aprovar";
-  await c.save();
+  const set: Record<string, unknown> = {
+    decision,
+    managerNote: note,
+    decidedAt: new Date(),
+    decidedBy: new mongoose.Types.ObjectId(user.id),
+  };
+  if (decision === "aprovado_com_edicao" && editedReply) set.proposedReply = editedReply;
+  if (decision === "escalado") set.status = "escalar";
+  else if (decision === "rejeitado") set.status = "para_aprovar";
+  else set.status = c.status === "reembolso" ? "reembolso" : "para_aprovar";
+  // updateOne evita a validação do documento inteiro (dados antigos) a bloquear a decisão.
+  await CsCase.updateOne({ _id: c._id, workspaceId: wid }, { $set: set });
 
   // Contadores do template: só aprovações contam (sem edição vs com edição).
   if (c.templateId && oid(c.templateId)) {
