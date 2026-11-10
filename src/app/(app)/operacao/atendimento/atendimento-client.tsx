@@ -648,7 +648,7 @@ function MiaChatImport() {
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
       <p className="font-medium">Importar a conversa da Mia</p>
-      <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro .txt.</p>
+      <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro, em .zip (como o WhatsApp o gera) ou .txt. O botão Importar só fica ativo depois de escolher o ficheiro.</p>
       <input
         type="file"
         onChange={async (e) => {
