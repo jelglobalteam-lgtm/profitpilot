@@ -666,6 +666,13 @@ function MiaChatImport() {
         }}
         className="block text-xs"
       />
+      <textarea
+        rows={3}
+        value={text}
+        onChange={(e) => { setText(e.target.value); setSenders([]); }}
+        placeholder="Se não conseguir escolher o ficheiro, abra o .txt, copie tudo e cole aqui."
+        className="w-full rounded-md border border-border bg-background p-2 font-mono text-xs"
+      />
       {senders.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {senders.map((n) => (
