@@ -638,9 +638,9 @@ function MiaChatImport() {
   const [text, setText] = useState("");
   const [senders, setSenders] = useState<string[]>([]);
   const [msg, setMsg] = useState("");
-  const send = (name: string) =>
+  const send = (body: string, name: string) =>
     start(async () => {
-      const r = await importMiaChatAction({ text, miaName: name });
+      const r = await importMiaChatAction({ text: body, miaName: name });
       if (r.error) setMsg(r.error);
       else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
       else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT")}.`); router.refresh(); }
@@ -648,39 +648,35 @@ function MiaChatImport() {
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
       <p className="font-medium">Importar a conversa da Mia</p>
-      <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro, em .zip (como o WhatsApp o gera) ou .txt. O botão Importar só fica ativo depois de escolher o ficheiro.</p>
-      <input
-        type="file"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          try {
-            const t = await readChatFile(f);
-            setText(t);
-            setSenders([]);
-            setMsg(t.trim() ? `Ficheiro lido (${f.name}). Carregue em Importar.` : "O ficheiro está vazio.");
-          } catch {
-            setText("");
-            setMsg("Não consegui ler este ficheiro. Exporte a conversa sem multimédia, em .txt.");
-          }
-        }}
-        className="block text-xs"
-      />
-      <textarea
-        rows={3}
-        value={text}
-        onChange={(e) => { setText(e.target.value); setSenders([]); }}
-        placeholder="Se não conseguir escolher o ficheiro, abra o .txt, copie tudo e cole aqui."
-        className="w-full rounded-md border border-border bg-background p-2 font-mono text-xs"
-      />
-      {senders.length > 0 ? (
+      <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro (.zip ou .txt). Importa logo ao escolher.</p>
+      <label className={cn("inline-block cursor-pointer rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground", pending && "opacity-50")}>
+        {pending ? "A importar..." : "Importar conversa"}
+        <input
+          type="file"
+          className="sr-only"
+          disabled={pending}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            try {
+              const t = await readChatFile(f);
+              if (!t.trim()) return setMsg("O ficheiro está vazio.");
+              setText(t);
+              setSenders([]);
+              send(t, "");
+            } catch {
+              setMsg("Não consegui ler este ficheiro. Exporte a conversa sem multimédia, em .txt ou .zip.");
+            }
+          }}
+        />
+      </label>
+      {senders.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {senders.map((n) => (
-            <button key={n} type="button" disabled={pending} onClick={() => send(n)} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">{n}</button>
+            <button key={n} type="button" disabled={pending} onClick={() => send(text, n)} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">{n}</button>
           ))}
         </div>
-      ) : (
-        <button type="button" disabled={pending || !text} onClick={() => send("")} className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50">Importar</button>
       )}
       {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
     </div>
