@@ -10,7 +10,7 @@ import {
   type InvoiceKind,
 } from "@/lib/cs-invoices";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
-import { addCsInvoiceAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
+import { addCsInvoiceAction, readInvoicePdfAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
 
 function LineChecker({ canEdit }: { canEdit: boolean }) {
   const [fee, setFee] = useState("5");
@@ -241,6 +241,31 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
               <option key={k} value={k}>{INVOICE_KIND_LABEL[k]}</option>
             ))}
           </select>
+          {kind === "mia_imposto" && (
+            <div className="space-y-1">
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="block text-xs"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setError(null);
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  start(async () => {
+                    const r = await readInvoicePdfAction(fd);
+                    if (r.error) setError(r.error);
+                    else if (r.fields) {
+                      setF((x) => ({ ...x, ...r.fields }));
+                      setError("PDF lido. Confira os campos antes de guardar.");
+                    }
+                  });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Carregue o PDF da Mia para preencher os campos; confira sempre antes de guardar.</p>
+            </div>
+          )}
           <div className="grid gap-2 sm:grid-cols-2">
             <input className={input} placeholder={kind === "mia_recarga" ? "Referência" : "Número da fatura"} value={f.number ?? ""} onChange={set("number")} />
             <input className={input} type="date" title="Data" value={f.issueDate ?? ""} onChange={set("issueDate")} />

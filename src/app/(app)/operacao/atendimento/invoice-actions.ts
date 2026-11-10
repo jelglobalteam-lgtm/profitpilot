@@ -127,3 +127,42 @@ export async function dismissCsInvoiceIssueAction(input: { id: string; message: 
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
+
+export type PdfFields = { number?: string; issueDate?: string; amount?: string; quantity?: string; orderFrom?: string; orderTo?: string };
+
+/** Lê o PDF de uma fatura da Mia e devolve os campos encontrados para o Emanuel conferir. Não grava nada. */
+export async function readInvoicePdfAction(formData: FormData): Promise<{ fields?: PdfFields; error?: string }> {
+  const { error } = await editorUser();
+  if (error) return { error };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0 || file.size > 5_000_000) return { error: "Ficheiro inválido." };
+  let text = "";
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+    const out = await extractText(pdf, { mergePages: true });
+    text = out.text;
+  } catch {
+    return { error: "Não consegui ler o PDF. Preencha os campos à mão." };
+  }
+  const flat = text.replace(/\s+/g, " ");
+  const fields: PdfFields = {};
+  const number = flat.match(/WWLLY\s?\d{8}\s?[A-Z]?\s?\d{1,3}(?:-TPB)?/i);
+  if (number) fields.number = number[0].replace(/\s+/g, " ").trim();
+  const iso = flat.match(/(\d{4})-(\d{2})-(\d{2})/);
+  const pt = flat.match(/(\d{2})[/.](\d{2})[/.](\d{4})/);
+  if (iso) fields.issueDate = iso[0];
+  else if (pt) fields.issueDate = `${pt[3]}-${pt[2]}-${pt[1]}`;
+  const amount = flat.match(/Total Amount\D{0,20}(\d+(?:[.,]\d{1,2})?)/i);
+  if (amount) fields.amount = amount[1].replace(",", ".");
+  const range = flat.match(/#?(\d{4})(?:-A)?\s*(?:to|-|–)\s*#?(\d{4})(?:-A)?/i);
+  if (range) {
+    fields.orderFrom = range[1];
+    fields.orderTo = range[2];
+  }
+  const qty = flat.match(/(?:Quantity|Qty|Orders?)\D{0,15}(\d{1,4})\b/i);
+  if (qty) fields.quantity = qty[1];
+  else if (range) fields.quantity = String(Number(range[2]) - Number(range[1]) + 1);
+  if (Object.keys(fields).length === 0) return { error: "Não encontrei dados reconhecíveis no PDF. Preencha os campos à mão." };
+  return { fields };
+}
