@@ -103,6 +103,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<InvoiceKind>("mia_imposto");
   const [f, setF] = useState<Record<string, string>>({});
+  const [pdf, setPdf] = useState<File | null>(null);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((x) => ({ ...x, [k]: e.target.value }));
   const balance = prepaidBalance(data.invoices);
@@ -243,27 +244,35 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
           </select>
           {kind === "mia_imposto" && (
             <div className="space-y-1">
-              <input
-                type="file"
-                accept="application/pdf,.pdf,.zip,application/zip"
-                className="block text-xs"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setError(null);
-                  const fd = new FormData();
-                  fd.append("file", file);
-                  start(async () => {
-                    const r = await readInvoicePdfAction(fd);
-                    if (r.error) setError(r.error);
-                    else if (r.fields) {
-                      setF((x) => ({ ...x, ...r.fields }));
-                      setError("PDF lido. Confira os campos antes de guardar.");
-                    }
-                  });
-                }}
-              />
-              <p className="text-xs text-muted-foreground">Carregue o PDF (ou o zip) da Mia para preencher os campos; confira sempre antes de guardar.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted">
+                  Escolher ficheiro
+                  <input type="file" className="sr-only" accept="application/pdf,.pdf,.zip,application/zip" onChange={(e) => setPdf(e.target.files?.[0] ?? null)} />
+                </label>
+                <span className="text-xs text-muted-foreground">{pdf ? pdf.name : "Nenhum ficheiro escolhido"}</span>
+                <button
+                  type="button"
+                  disabled={!pdf || pending}
+                  className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
+                  onClick={() => {
+                    if (!pdf) return;
+                    setError(null);
+                    const fd = new FormData();
+                    fd.append("file", pdf);
+                    start(async () => {
+                      const r = await readInvoicePdfAction(fd);
+                      if (r.error) setError(r.error);
+                      else if (r.fields) {
+                        setF((x) => ({ ...x, ...r.fields }));
+                        setError("Fatura lida. Confira os campos antes de guardar.");
+                      }
+                    });
+                  }}
+                >
+                  {pending ? "A ler..." : "Importar fatura"}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">PDF (ou zip) da Mia. Preenche os campos; confira sempre antes de guardar.</p>
             </div>
           )}
           <div className="grid gap-2 sm:grid-cols-2">
