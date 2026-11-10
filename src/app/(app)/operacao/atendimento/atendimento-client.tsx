@@ -1,5 +1,6 @@
 "use client";
 
+import { miaBatchMessage } from "@/lib/cs-quotes";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { PageTabs } from "@/components/page-tabs";
@@ -28,13 +29,11 @@ import type { InvoiceData } from "@/lib/cs-invoice-data";
 import { shipmentAlert, type ShipmentView } from "@/lib/parcelpanel-csv";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
 import {
-  addCsMiaMessageAction,
   importMiaChatAction,
-  reviewMiaRepliesAction,
+  sendMiaBatchAction,
   closeCsCaseAction,
   decideCsCaseAction,
   saveCsTemplateAction,
-  setCsMiaStatusAction,
   setCsTemplateAutoAction,
 } from "./actions";
 
@@ -546,119 +545,52 @@ function TemplateRow({ t, canEdit }: { t: CsTemplateView; canEdit: boolean }) {
 
 function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: boolean }) {
   const { run, pending, error } = useRun();
-  const [question, setQuestion] = useState("");
-  const [reply, setReply] = useState("");
+  const [copied, setCopied] = useState(false);
   const questions = messages.filter((m) => m.direction === "pergunta");
-  const requests = messages.filter((m) => m.direction === "pedido");
+  const dayAgo = Date.now() - 86_400_000;
+  // Por enviar: rascunhos e perguntas sem resposta há mais de 1 dia (voltar a perguntar), numa só mensagem.
+  const toSend = questions.filter((m) => m.status === "rascunho" || (m.status === "enviada" && new Date(m.updatedAt).getTime() < dayAgo));
+  const waiting = questions.filter((m) => m.status === "enviada" && !toSend.includes(m));
+  const text = miaBatchMessage(toSend.map((m) => m.textEn));
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Perguntas à Mia</h2>
-        {canEdit && (
-          <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              rows={3}
-              placeholder="Escreva em português. O Claude prepara a mensagem em inglês."
-              className="w-full rounded-md border border-border bg-background p-2 text-sm"
-            />
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  const r = await addCsMiaMessageAction({ direction: "pergunta", textPt: question });
-                  if (!r.error) setQuestion("");
-                  return r;
-                })
-              }
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
-            >
-              Guardar pergunta
-            </button>
+        <h2 className="text-lg font-semibold">Mensagem para a Mia</h2>
+        {toSend.length === 0 ? (
+          <p className="rounded-lg border border-border bg-surface p-3 text-sm text-muted-foreground">Nada por enviar à Mia.</p>
+        ) : (
+          <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
+            <p className="whitespace-pre-wrap">{text}</p>
+            {canEdit && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  void navigator.clipboard.writeText(text);
+                  setCopied(true);
+                  run(() => sendMiaBatchAction({ ids: toSend.map((m) => m.id) }));
+                }}
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
+              >
+                {copied ? "Copiado e marcado como enviado" : "Copiar e marcar como enviado"}
+              </button>
+            )}
           </div>
         )}
-        {questions.map((m) => (
-          <div key={m.id} className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
-            <p className="whitespace-pre-wrap">{m.textPt}</p>
-            {m.textEn && <p className="whitespace-pre-wrap text-muted-foreground">{m.textEn}</p>}
-            <div className="flex items-center gap-2 pt-1">
-              {m.textEn && (
-                <button
-                  type="button"
-                  onClick={() => { void navigator.clipboard.writeText(m.textEn); if (canEdit && m.status !== "respondida") run(() => setCsMiaStatusAction({ id: m.id, status: "enviada" })); }}
-                  className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-                >
-                  {m.status === "enviada" ? "Voltar a perguntar (copiar)" : "Copiar para a Mia"}
-                </button>
-              )}
-              <span className="text-xs text-muted-foreground">Estado:</span>
-              <select
-                value={m.status}
-                disabled={!canEdit || pending}
-                onChange={(e) =>
-                  run(() =>
-                    setCsMiaStatusAction({
-                      id: m.id,
-                      status: e.target.value as CsMiaMessageView["status"],
-                    }),
-                  )
-                }
-                className="rounded-md border border-border bg-background px-2 py-1 text-xs"
-              >
-                <option value="rascunho">Rascunho</option>
-                <option value="enviada">Enviada</option>
-                <option value="respondida">Respondida</option>
-              </select>
-            </div>
+        {waiting.length > 0 && (
+          <div className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
+            <p className="font-medium">À espera da resposta da Mia</p>
+            {waiting.map((m) => (
+              <p key={m.id} className="text-muted-foreground">{m.textPt}</p>
+            ))}
           </div>
-        ))}
+        )}
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Pedidos da Mia</h2>
+        <h2 className="text-lg font-semibold">Conversa da Mia</h2>
         {canEdit && <MiaChatImport />}
-        {canEdit && (
-          <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
-            <textarea
-              value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              rows={3}
-              placeholder="Cole aqui a resposta ou o pedido da Mia. O Claude propõe o seguimento."
-              className="w-full rounded-md border border-border bg-background p-2 text-sm"
-            />
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  const r = await addCsMiaMessageAction({ direction: "pedido", reply });
-                  if (!r.error) setReply("");
-                  return r;
-                })
-              }
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
-            >
-              Guardar resposta
-            </button>
-          </div>
-        )}
-        {canEdit && requests.some((m) => !m.reviewed) && (
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm">
-            <span>Há respostas novas da Mia. Reveja se respondem a perguntas pendentes ou trazem pedidos novos.</span>
-            <button type="button" disabled={pending} onClick={() => run(() => reviewMiaRepliesAction())} className="shrink-0 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">Já revi</button>
-          </div>
-        )}
-        {requests.map((m) => (
-          <div key={m.id} className="space-y-1 rounded-lg border border-border bg-surface p-3 text-sm">
-            <p className="whitespace-pre-wrap">{m.reply}</p>
-            <p className="text-xs text-muted-foreground">
-              Seguimento proposto: {m.followUp || "a aguardar análise"}
-            </p>
-          </div>
-        ))}
       </section>
       {error && <p className="text-sm text-negative lg:col-span-2">{error}</p>}
     </div>

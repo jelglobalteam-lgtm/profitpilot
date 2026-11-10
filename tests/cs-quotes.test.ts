@@ -65,3 +65,12 @@ test("exportação do WhatsApp: Android, iPhone e linhas seguidas", async () => 
   const ios = parseWhatsAppExport("[08/11/2026, 14:05:30] Mia: Done");
   assert.equal(ios[0].at.toISOString(), "2026-11-08T14:05:30.000Z");
 });
+
+test("mensagem à Mia em bloco: uma só saudação", async () => {
+  const { miaBatchMessage } = await import("../src/lib/cs-quotes.ts");
+  const one = miaBatchMessage(["Hi Mia, is it possible to change size? Thank you."]);
+  assert.equal(one, "Hi Mia,\n\nIs it possible to change size?\n\nThank you.");
+  const two = miaBatchMessage(["Hi Mia, question A. Thank you.", "Hi Mia, question B."]);
+  assert.equal(two.match(/Hi Mia/g)?.length, 1);
+  assert.ok(two.includes("1. Question A.") && two.includes("2. Question B."));
+});

@@ -301,3 +301,27 @@ export async function reviewMiaRepliesAction(): Promise<Result> {
   revalidatePath("/operacao/atendimento");
   return { ok: true };
 }
+
+/** Marca várias perguntas como enviadas à Mia (copiadas em bloco) e põe os casos ligados a aguardar o fornecedor. */
+export async function sendMiaBatchAction(input: { ids: string[] }): Promise<Result> {
+  const { user, error } = await editor();
+  if (error) return { error };
+  const ids = (input.ids ?? []).filter(oid);
+  if (ids.length === 0) return { error: "Sem perguntas." };
+  await connectToDatabase();
+  const wid = new mongoose.Types.ObjectId(user.workspaceId);
+  const msgs = await CsMiaMessage.find({ _id: { $in: ids }, workspaceId: wid }).select("caseId").lean();
+  await CsMiaMessage.updateMany({ _id: { $in: msgs.map((m) => m._id) }, workspaceId: wid }, { $set: { status: "enviada" } });
+  for (const m of msgs) {
+    if (!m.caseId) continue;
+    const c = await CsCase.findOne({ _id: m.caseId, workspaceId: wid }).select("timeline").lean();
+    if (c) {
+      await CsCase.updateOne(
+        { _id: m.caseId },
+        { $set: { status: "a_aguardar_fornecedor" }, $push: { timeline: { at: new Date(), n: ((c.timeline ?? []).length as number) + 1, summary: "Pedido enviado à Mia. A aguardar resposta." } } },
+      );
+    }
+  }
+  revalidatePath("/operacao/atendimento");
+  return { ok: true };
+}

@@ -81,3 +81,14 @@ export function miaPriceIncreaseMessage(i: { title: string; link: string; from: 
     "Thank you.",
   ].join("\n\n");
 }
+
+/** Junta várias perguntas à Mia numa só mensagem, com uma única saudação e um único agradecimento. */
+export function miaBatchMessage(texts: string[]): string {
+  const bodies = texts
+    .map((t) => t.trim().replace(/^Hi( Mia)?,?\s*/i, "").replace(/\s*Thank you\.?\s*$/i, "").trim())
+    .filter(Boolean)
+    .map((b) => b.charAt(0).toUpperCase() + b.slice(1));
+  if (bodies.length === 0) return "";
+  if (bodies.length === 1) return `Hi Mia,\n\n${bodies[0]}\n\nThank you.`;
+  return `Hi Mia, a few questions:\n\n${bodies.map((b, i) => `${i + 1}. ${b}`).join("\n\n")}\n\nThank you.`;
+}

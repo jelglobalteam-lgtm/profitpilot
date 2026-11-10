@@ -138,6 +138,7 @@ export type CsMiaMessageView = {
   followUp: string;
   reviewed: boolean;
   createdAt: string;
+  updatedAt: string;
 };
 
 /** Ações rápidas num caso (atalho de teclado entre parênteses na interface). */

@@ -85,6 +85,7 @@ function toMiaView(d: CsMiaMessageDoc): CsMiaMessageView {
     followUp: d.followUp ?? "",
     reviewed: d.reviewed !== false,
     createdAt: new Date(d.createdAt).toISOString(),
+    updatedAt: new Date((d as { updatedAt?: Date }).updatedAt ?? d.createdAt).toISOString(),
   };
 }
 
