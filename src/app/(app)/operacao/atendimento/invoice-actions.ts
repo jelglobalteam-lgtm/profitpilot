@@ -51,6 +51,7 @@ export async function checkMiaInvoiceAction(text: string, fee = 5): Promise<Resu
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CsInvoice } from "@/models/CsInvoice";
+import { CsInvoiceUpload } from "@/models/CsInvoiceUpload";
 import { INVOICE_KINDS } from "@/lib/cs-invoices";
 
 const invoiceSchema = z.object({
@@ -132,7 +133,7 @@ export type PdfFields = { number?: string; issueDate?: string; amount?: string; 
 
 /** Lê o PDF de uma fatura da Mia e devolve os campos encontrados para o Emanuel conferir. Não grava nada. */
 export async function readInvoicePdfAction(formData: FormData): Promise<{ fields?: PdfFields; error?: string }> {
-  const { error } = await editorUser();
+  const { user, error } = await editorUser();
   if (error) return { error };
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0 || file.size > 5_000_000) return { error: "Ficheiro inválido." };
@@ -153,6 +154,16 @@ export async function readInvoicePdfAction(formData: FormData): Promise<{ fields
   } catch {
     return { error: "Não consegui ler o PDF. Preencha os campos à mão." };
   }
+  if (text.trim()) {
+    await connectToDatabase();
+    await CsInvoiceUpload.create({
+      workspaceId: new mongoose.Types.ObjectId(user.workspaceId),
+      fileName: file.name.slice(0, 200),
+      text: text.slice(0, 60_000),
+      uploadedBy: new mongoose.Types.ObjectId(user.id),
+    });
+    revalidatePath("/operacao/atendimento");
+  }
   const flat = text.replace(/\s+/g, " ");
   const fields: PdfFields = {};
   const number = flat.match(/WWLLY\s?\d{8}\s?[A-Z]?\s?\d{1,3}(?:-TPB)?/i);
@@ -171,6 +182,6 @@ export async function readInvoicePdfAction(formData: FormData): Promise<{ fields
   const qty = flat.match(/(?:Quantity|Qty|Orders?)\D{0,15}(\d{1,4})\b/i);
   if (qty) fields.quantity = qty[1];
   else if (range) fields.quantity = String(Number(range[2]) - Number(range[1]) + 1);
-  if (Object.keys(fields).length === 0) return { error: "Não encontrei dados reconhecíveis no PDF. Preencha os campos à mão." };
+  if (Object.keys(fields).length === 0) return { error: "Fatura recebida. Não reconheci os campos, por isso a rotina vai lê-la e registá-la; também pode preenchê-los à mão." };
   return { fields };
 }

@@ -264,7 +264,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
                       if (r.error) setError(r.error);
                       else if (r.fields) {
                         setF((x) => ({ ...x, ...r.fields }));
-                        setError("Fatura lida. Confira os campos antes de guardar.");
+                        setError("Fatura recebida; a rotina também a lê e regista. Confira os campos antes de guardar.");
                       }
                     });
                   }}
