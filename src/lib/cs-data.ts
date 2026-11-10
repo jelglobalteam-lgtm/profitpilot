@@ -118,7 +118,8 @@ export async function loadCsData(workspaceId: string) {
     CsTemplate.find({ workspaceId: wid, deletedAt: null })
       .sort({ number: 1 })
       .lean<CsTemplateDoc[]>(),
-    CsMiaMessage.find({ workspaceId: wid, deletedAt: null })
+    // As respostas importadas da conversa já não se mostram; só interessam as perguntas.
+    CsMiaMessage.find({ workspaceId: wid, deletedAt: null, direction: "pergunta" })
       .sort({ createdAt: -1 })
       .limit(200)
       .lean<CsMiaMessageDoc[]>(),
