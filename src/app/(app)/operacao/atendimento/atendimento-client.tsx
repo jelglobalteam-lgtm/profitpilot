@@ -606,6 +606,32 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
   );
 }
 
+/** Lê um .txt ou o .zip que o WhatsApp gera ao exportar (extrai o primeiro .txt). */
+async function readChatFile(f: File): Promise<string> {
+  const buf = await f.arrayBuffer();
+  const b = new DataView(buf);
+  if (b.byteLength < 4 || b.getUint32(0, true) !== 0x04034b50) return new TextDecoder().decode(buf);
+  let o = 0;
+  while (o + 30 <= b.byteLength && b.getUint32(o, true) === 0x04034b50) {
+    const flags = b.getUint16(o + 6, true);
+    const method = b.getUint16(o + 8, true);
+    const csize = b.getUint32(o + 18, true);
+    const nlen = b.getUint16(o + 26, true);
+    const xlen = b.getUint16(o + 28, true);
+    const name = new TextDecoder().decode(new Uint8Array(buf, o + 30, nlen));
+    const start = o + 30 + nlen + xlen;
+    if (flags & 8) throw new Error("zip");
+    if (name.toLowerCase().endsWith(".txt")) {
+      const data = new Uint8Array(buf, start, csize);
+      if (method === 0) return new TextDecoder().decode(data);
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      return new TextDecoder().decode(await new Response(stream).arrayBuffer());
+    }
+    o = start + csize;
+  }
+  throw new Error("zip");
+}
+
 function MiaChatImport() {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -625,8 +651,19 @@ function MiaChatImport() {
       <p className="text-muted-foreground">No WhatsApp: abrir a conversa, Exportar conversa, sem multimédia, e escolher aqui o ficheiro .txt.</p>
       <input
         type="file"
-        accept=".txt,text/plain"
-        onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(await f.text()); setSenders([]); setMsg("Ficheiro lido. Carregue em Importar."); } }}
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          try {
+            const t = await readChatFile(f);
+            setText(t);
+            setSenders([]);
+            setMsg(t.trim() ? `Ficheiro lido (${f.name}). Carregue em Importar.` : "O ficheiro está vazio.");
+          } catch {
+            setText("");
+            setMsg("Não consegui ler este ficheiro. Exporte a conversa sem multimédia, em .txt.");
+          }
+        }}
         className="block text-xs"
       />
       {senders.length > 0 ? (
