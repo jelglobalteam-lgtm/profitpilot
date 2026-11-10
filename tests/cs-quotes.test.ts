@@ -54,3 +54,14 @@ test("mensagem à Mia quando o preço sobe", () => {
   assert.match(m, /from 5\.00 EUR to 6\.00 EUR/);
   assert.match(m, /explain the change/);
 });
+
+test("exportação do WhatsApp: Android, iPhone e linhas seguidas", async () => {
+  const { parseWhatsAppExport, whatsAppSenders } = await import("../src/lib/cs-whatsapp.ts");
+  const android = "08/11/2026, 14:05 - Mia: Hi Emanuel\nsecond line\n08/11/2026, 14:07 - Emanuel: ok";
+  const a = parseWhatsAppExport(android);
+  assert.equal(a.length, 2);
+  assert.equal(a[0].text, "Hi Emanuel\nsecond line");
+  assert.deepEqual(whatsAppSenders(a), ["Mia", "Emanuel"]);
+  const ios = parseWhatsAppExport("[08/11/2026, 14:05:30] Mia: Done");
+  assert.equal(ios[0].at.toISOString(), "2026-11-08T14:05:30.000Z");
+});
