@@ -9,9 +9,11 @@ import {
 
 const TimelineSchema = new Schema(
   {
-    n: { type: Number, required: true },
+    n: { type: Number, default: 0 },
     at: { type: Date, default: null },
     summary: { type: String, default: "" },
+    /** Entradas antigas gravadas com "text" em vez de "summary". */
+    text: { type: String, default: "" },
   },
   { _id: false },
 );
