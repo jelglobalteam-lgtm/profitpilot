@@ -87,7 +87,7 @@ export function computeCsAlerts(
 
   for (const c of cases) {
     if (!OPEN.has(c.status)) continue;
-    const label = `${c.orderNumber ? `#${c.orderNumber} ` : ""}${c.customerName || c.customerEmail || "Caso"}`;
+    const label = `${c.orderNumber ? `${c.orderNumber.startsWith("#") ? c.orderNumber : `#${c.orderNumber}`} ` : ""}${c.customerName || c.customerEmail || "Caso"}`;
     const sinceUpdateH = (now - new Date(c.updatedAt).getTime()) / H;
     const sinceOpenH = (now - new Date(c.openedAt).getTime()) / H;
 
