@@ -7,7 +7,8 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import { roleRank } from "@/lib/rbac";
-import { parseWhatsAppExport, whatsAppSenders } from "@/lib/cs-whatsapp";
+import { parseWhatsAppExport, parseMiaInvoiceNotes, whatsAppSenders } from "@/lib/cs-whatsapp";
+import { CsInvoice } from "@/models/CsInvoice";
 import { CsMiaCoverage } from "@/models/CsMiaCoverage";
 import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
@@ -263,7 +264,7 @@ export async function quickCsActionAction(input: z.infer<typeof quickSchema>): P
 }
 
 /** Importa a conversa da Mia (ficheiro .txt exportado do WhatsApp): grava as mensagens novas da Mia e atualiza até onde está lida. */
-export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; until?: string }> {
+export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; until?: string; missingInvoices?: string[] }> {
   const { user, error } = await editor();
   if (error) return { error };
   if (typeof input.text !== "string" || input.text.length === 0 || input.text.length > 5_000_000) return { error: "Ficheiro inválido." };
@@ -288,8 +289,19 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     { $set: { coveredUntil: last }, $setOnInsert: { coveredFrom: messages[0].at } },
     { upsert: true },
   );
+  // Faturas anunciadas pela Mia na conversa: atualiza o saldo das já registadas e lista as que faltam importar.
+  const notes = parseMiaInvoiceNotes(messages, input.miaName);
+  const missing: string[] = [];
+  for (const n of notes) {
+    const found = await CsInvoice.findOne({ workspaceId: wid, kind: "mia_imposto", number: new RegExp(`^${n.number}`, "i"), deletedAt: null }).select("_id").lean();
+    if (!found) {
+      missing.push(n.number);
+      continue;
+    }
+    if (n.balance != null) await CsInvoice.updateOne({ _id: found._id }, { $set: { miaBalance: n.balance } });
+  }
   revalidatePath("/operacao/atendimento");
-  return { ok: true, imported: fromMia.length, until: last.toISOString() };
+  return { ok: true, imported: fromMia.length, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
 }
 
 /** Marca como revistas as respostas da Mia importadas (depois de ver se resolvem perguntas pendentes ou trazem pedidos novos). */

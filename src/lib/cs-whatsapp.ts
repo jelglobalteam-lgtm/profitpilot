@@ -48,3 +48,30 @@ export function parseWhatsAppExport(raw: string, now = new Date()): WhatsAppMess
 export function whatsAppSenders(messages: WhatsAppMessage[]): string[] {
   return [...new Set(messages.map((m) => m.sender))];
 }
+
+export type MiaInvoiceNote = { number: string; amount: number | null; balance: number | null; at: Date };
+
+const toNum = (s: string) => Number(s.replace(",", "."));
+
+/**
+ * Procura na conversa as mensagens em que a Mia anuncia uma fatura ("Invoice Number:WWLLY...", "Total Amount:€ 70")
+ * e o saldo que se segue ("All left :89.11-15.34-70=€3.77"). Função pura.
+ */
+export function parseMiaInvoiceNotes(messages: WhatsAppMessage[], miaName: string): MiaInvoiceNote[] {
+  const name = miaName.trim().toLowerCase();
+  const mine = messages.filter((m) => m.sender.toLowerCase() === name).sort((a, b) => a.at.getTime() - b.at.getTime());
+  const notes: MiaInvoiceNote[] = [];
+  for (let i = 0; i < mine.length; i++) {
+    const m = mine[i];
+    const num = m.text.match(/Invoice\s*Number\s*[:：]?\s*(WWLLY\d{8}[A-Z]\d{1,3})/i);
+    if (!num) continue;
+    const amt = m.text.match(/Total\s*Amount\s*[:：]?\s*€?\s*(\d+(?:[.,]\d{1,2})?)/i);
+    let balance: number | null = null;
+    const next = mine[i + 1];
+    const text = next && next.at.getTime() - m.at.getTime() < 6 * 3600_000 ? next.text : "";
+    const left = text.match(/All\s*left\s*[:：]?[^=]*=\s*€?\s*(-?\d+(?:[.,]\d{1,2})?)/i);
+    if (left) balance = toNum(left[1]);
+    notes.push({ number: num[1].toUpperCase(), amount: amt ? toNum(amt[1]) : null, balance, at: m.at });
+  }
+  return notes;
+}
