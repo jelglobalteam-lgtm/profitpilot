@@ -27,9 +27,8 @@ export function miaExportRange(coveredUntil: Date | null, now = new Date()) {
 export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "storeAccess">): Promise<PendingItem[]> {
   await connectToDatabase();
   const wid = new mongoose.Types.ObjectId(user.workspaceId);
-  const [cases, miaStale, miaDrafts, coverage, shipments, quotes, cogsChanges, invoices] = await Promise.all([
+  const [cases, miaDrafts, coverage, shipments, quotes, cogsChanges, invoices] = await Promise.all([
     CsCase.countDocuments({ workspaceId: wid, deletedAt: null, status: { $in: ["para_aprovar", "escalar", "reembolso"] }, decision: null }),
-    CsMiaMessage.countDocuments({ workspaceId: wid, deletedAt: null, direction: "pergunta", status: "enviada", updatedAt: { $lt: new Date(Date.now() - 18 * 3_600_000) } }),
     CsMiaMessage.countDocuments({ workspaceId: wid, deletedAt: null, direction: "pergunta", status: "rascunho" }),
     CsMiaCoverage.findOne({ workspaceId: wid }).lean<{ coveredUntil: Date | null } | null>(),
     CsShipment.find({ workspaceId: wid }).select("status lastEventAt orderedAt importedAt").lean<{ status: ShipmentStatus; lastEventAt: Date | null; orderedAt: Date | null; importedAt: Date }[]>(),
@@ -41,7 +40,6 @@ export async function loadCsPending(user: Pick<CurrentUser, "workspaceId" | "sto
   const add = (key: string, label: string, count: number, tab: string) => count > 0 && items.push({ key, label, count, tab });
 
   add("casos", plural(cases, "caso para decidir", "casos para decidir"), cases, "casos");
-  add("mia-repetir", plural(miaStale, "lembrete por enviar à Mia (sem resposta há mais de 18 h)", "lembretes por enviar à Mia (sem resposta há mais de 18 h)"), miaStale, "mia");
   add("mia-rascunho", plural(miaDrafts, "pergunta por enviar à Mia", "perguntas por enviar à Mia"), miaDrafts, "mia");
 
   const range = miaExportRange(coverage?.coveredUntil ?? null);
