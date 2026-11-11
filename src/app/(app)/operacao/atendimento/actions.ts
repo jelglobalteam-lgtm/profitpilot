@@ -1,5 +1,6 @@
 "use server";
 
+import { isInvoiceInScope } from "@/lib/cs-invoices";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
@@ -294,6 +295,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   const notes = parseMiaInvoiceNotes(messages, input.miaName);
   const missing: string[] = [];
   for (const n of notes) {
+    if (!isInvoiceInScope(n.number)) continue;
     await CsMiaInvoiceNote.updateOne(
       { workspaceId: wid, number: n.number },
       { $set: { amount: n.amount, balance: n.balance, announcedAt: n.at } },

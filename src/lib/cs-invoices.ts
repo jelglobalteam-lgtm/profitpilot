@@ -2,6 +2,13 @@ import { euCustomsFeePerOrderEurForDay } from "@/lib/eu-category-fees-types";
 export const INVOICE_KINDS = ["mia_imposto", "mia_recarga", "agencia_google"] as const;
 /** Identificador da loja RivaSylt IT nas faturas da Mia ("Store Name" no PDF). */
 export const RIVASYLT_IT_STORE_ID = "7ff85d-50";
+/** As faturas da Mia desta loja contam a partir de 19/09/2026; as anteriores não se aplicam. */
+export const MIA_INVOICES_FROM = "20260919";
+/** Número de fatura (WWLLYaaaammdd...) dentro do período que conta. */
+export function isInvoiceInScope(number: string): boolean {
+  const m = /^WWLLY(\d{8})/i.exec(number);
+  return !m || m[1] >= MIA_INVOICES_FROM;
+}
 
 /** Recarga que é na verdade o saldo que a Mia indica numa data: já inclui as faturas anteriores. */
 export const isOpeningBalance = (i: { kind: string; number: string }) => i.kind === "mia_recarga" && /^saldo anterior/i.test(i.number);

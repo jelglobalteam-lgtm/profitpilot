@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import { AdCampaignDay } from "@/models/AdCampaignDay";
 import { CsInvoice, type CsInvoiceDoc } from "@/models/CsInvoice";
 import { CsMiaInvoiceNote } from "@/models/CsMiaInvoiceNote";
-import { checkInvoices, missingInvoiceAlerts, type InvoiceIssue, type InvoiceKind, type InvoiceView } from "@/lib/cs-invoices";
+import { isInvoiceInScope, checkInvoices, missingInvoiceAlerts, type InvoiceIssue, type InvoiceKind, type InvoiceView } from "@/lib/cs-invoices";
 
 const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : null);
 const key = (d: Date) => d.toISOString().slice(0, 10);
@@ -46,6 +46,7 @@ export async function loadInvoices(workspaceId: string) {
   }
   const notes = await CsMiaInvoiceNote.find({ workspaceId: wid }).lean<{ number: string; amount: number | null }[]>();
   const announced = notes
+    .filter((n) => isInvoiceInScope(n.number))
     .filter((n) => !invoices.some((i) => i.kind === "mia_imposto" && i.number.toUpperCase().startsWith(n.number.toUpperCase())))
     .map((n): InvoiceIssue => ({
       invoiceId: "",
