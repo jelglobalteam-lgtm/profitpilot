@@ -6,6 +6,7 @@ import { AttentionBang } from "@/components/attention-bang";
 import type { CogsChangeView } from "@/lib/cs-cogs-data";
 import { miaPriceIncreaseMessage } from "@/lib/cs-quotes";
 import { reviewCogsChangeAction } from "./quote-actions";
+import { useConfirmMiaSend } from "./mia-send-guard";
 
 const eur = (n: number | null, cur = "EUR") =>
   n == null ? "—" : new Intl.NumberFormat("pt-PT", { style: "currency", currency: cur }).format(n);
@@ -15,6 +16,7 @@ const day = (iso: string | null) =>
 /** Tabela das alterações de COGS: último COGS registado (e desde quando) contra o preço visto agora. */
 export function CogsChanges({ rows, canEdit }: { rows: CogsChangeView[]; canEdit: boolean }) {
   const router = useRouter();
+  const confirmSend = useConfirmMiaSend();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   if (rows.length === 0) return null;
@@ -91,7 +93,7 @@ export function CogsChanges({ rows, canEdit }: { rows: CogsChangeView[]; canEdit
                   <td className="p-2">
                     {canEdit && r.increase && !r.review && (
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" disabled={pending} onClick={() => copyAndAsk(r)} className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground disabled:opacity-50">
+                        <button type="button" disabled={pending} onClick={() => confirmSend(() => copyAndAsk(r))} className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground disabled:opacity-50">
                           Copiar mensagem à Mia
                         </button>
                         <button type="button" disabled={pending} onClick={() => review(r, "perguntado")} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50">

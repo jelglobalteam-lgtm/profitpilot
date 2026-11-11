@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { QuoteProductView } from "@/lib/cs-quote-data";
 import type { CogsChangeView } from "@/lib/cs-cogs-data";
 import { CogsChanges } from "./cogs-changes";
+import { useConfirmMiaSend } from "./mia-send-guard";
 import {
   QUOTE_RESPONSES,
   QUOTE_RESPONSE_LABEL,
@@ -168,6 +169,7 @@ function QuoteDialog({
       else router.refresh();
     });
   }
+  const confirmSend = useConfirmMiaSend();
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
@@ -252,26 +254,28 @@ function QuoteDialog({
               value={text}
             />
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copy} className="rounded-md border border-border px-3 py-1 text-sm">
+              <button type="button" onClick={() => confirmSend(() => void copy())} className="rounded-md border border-border px-3 py-1 text-sm">
                 {copied ? "Copiado" : "Só copiar"}
               </button>
               <button
                 type="button"
                 disabled={pending}
                 className="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground disabled:opacity-50"
-                onClick={async () => {
-                  await copy();
-                  run(() =>
-                    recordQuoteRequestAction({
-                      productId: p.productId,
-                      title: p.title,
-                      link,
-                      units: p.units,
-                      qualityCheck: qc,
-                      originalCogs: num(original),
-                    }),
-                  );
-                }}
+                onClick={() =>
+                  confirmSend(async () => {
+                    await copy();
+                    run(() =>
+                      recordQuoteRequestAction({
+                        productId: p.productId,
+                        title: p.title,
+                        link,
+                        units: p.units,
+                        qualityCheck: qc,
+                        originalCogs: num(original),
+                      }),
+                    );
+                  })
+                }
               >
                 Copiar e registar pedido
               </button>

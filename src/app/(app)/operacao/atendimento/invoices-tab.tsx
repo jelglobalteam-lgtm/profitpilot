@@ -10,6 +10,7 @@ import {
   type InvoiceKind,
 } from "@/lib/cs-invoices";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
+import { useConfirmMiaSend } from "./mia-send-guard";
 import { addCsInvoiceAction, importInvoicePdfAction, checkMiaInvoiceAction, dismissCsInvoiceIssueAction, setCsInvoicePaidAction } from "./invoice-actions";
 
 function LineChecker({ canEdit }: { canEdit: boolean }) {
@@ -18,6 +19,7 @@ function LineChecker({ canEdit }: { canEdit: boolean }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ lines?: number; findings?: InvoiceFinding[]; message?: string; error?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const confirmSend = useConfirmMiaSend();
 
   return (
     <div className="space-y-3">
@@ -76,10 +78,12 @@ function LineChecker({ canEdit }: { canEdit: boolean }) {
               <button
                 type="button"
                 className="rounded-md border border-border px-3 py-1 text-sm"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(result.message ?? "");
-                  setCopied(true);
-                }}
+                onClick={() =>
+                  confirmSend(async () => {
+                    await navigator.clipboard.writeText(result.message ?? "");
+                    setCopied(true);
+                  })
+                }
               >
                 {copied ? "Copiado" : "Copiar mensagem à Mia"}
               </button>
@@ -99,6 +103,7 @@ const money = (n: number, c: string) =>
 
 export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boolean }) {
   const router = useRouter();
+  const confirmSend = useConfirmMiaSend();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<InvoiceKind>("mia_imposto");
@@ -165,7 +170,7 @@ export function InvoicesTab({ data, canEdit }: { data: InvoiceData; canEdit: boo
               {i.ask && (
                 <button
                   type="button"
-                  onClick={() => { void navigator.clipboard.writeText(i.ask as string); }}
+                  onClick={() => confirmSend(() => { void navigator.clipboard.writeText(i.ask as string); })}
                   className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
                 >
                   Copiar mensagem à {i.to}

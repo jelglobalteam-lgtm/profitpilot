@@ -25,6 +25,7 @@ import { PricesTab } from "./prices-tab";
 import type { CogsChangeView } from "@/lib/cs-cogs-data";
 import { ShipmentsTab } from "./shipments-tab";
 import { InvoicesTab } from "./invoices-tab";
+import { MiaSendGuard, useConfirmMiaSend, type MiaCoverageView } from "./mia-send-guard";
 import type { InvoiceData } from "@/lib/cs-invoice-data";
 import { shipmentAlert, type ShipmentView } from "@/lib/parcelpanel-csv";
 import { CS_PHASES, CS_RULES, computeCsAlerts, type CsAlertLevel } from "@/lib/cs-rules";
@@ -66,7 +67,7 @@ function useRun() {
   return { run, pending, error };
 }
 
-export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoices, attentionTabs, canEdit, initialTab }: { data: CsData; quotes: QuoteProductView[]; cogsChanges: CogsChangeView[]; shipments: ShipmentView[]; invoices: InvoiceData; attentionTabs: string[]; canEdit: boolean; initialTab?: string }) {
+export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoices, attentionTabs, canEdit, initialTab, miaCoverage }: { data: CsData; quotes: QuoteProductView[]; cogsChanges: CogsChangeView[]; shipments: ShipmentView[]; invoices: InvoiceData; attentionTabs: string[]; canEdit: boolean; initialTab?: string; miaCoverage: MiaCoverageView }) {
   const [tab, setTab] = useState(
     ["casos", "templates", "mia", "produtos", "precos", "envios", "faturas", "prazos", "geral"].includes(initialTab ?? "") ? (initialTab as string) : "casos",
   );
@@ -93,6 +94,7 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
     ? new Date(lastRead).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : "sem registo";
   return (
+    <MiaSendGuard coverage={miaCoverage}>
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Atendimento</h1>
@@ -123,6 +125,7 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
       {tab === "prazos" && <DeadlinesTab alerts={alerts} />}
       {tab === "geral" && <OverviewTab cases={data.cases} />}
     </div>
+    </MiaSendGuard>
   );
 }
 
@@ -557,6 +560,7 @@ function TemplateRow({ t, canEdit }: { t: CsTemplateView; canEdit: boolean }) {
 function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: boolean }) {
   const { run, pending, error } = useRun();
   const [copied, setCopied] = useState(false);
+  const confirmSend = useConfirmMiaSend();
   const questions = messages.filter((m) => m.direction === "pergunta");
   const staleAt = Date.now() - 18 * 3_600_000;
   // Por enviar: perguntas novas e lembretes (sem resposta há mais de 18 h), numa só mensagem.
@@ -579,11 +583,13 @@ function MiaTab({ messages, canEdit }: { messages: CsMiaMessageView[]; canEdit: 
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => {
-                  void navigator.clipboard.writeText(text);
-                  setCopied(true);
-                  run(() => sendMiaBatchAction({ ids: toSend.map((m) => m.id) }));
-                }}
+                onClick={() =>
+                  confirmSend(() => {
+                    void navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    run(() => sendMiaBatchAction({ ids: toSend.map((m) => m.id) }));
+                  })
+                }
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
               >
                 {copied ? "Copiado e marcado como enviado" : "Copiar e marcar como enviado"}
@@ -647,7 +653,7 @@ function MiaChatImport() {
       const r = await importMiaChatAction({ text: body, miaName: name });
       if (r.error) setMsg(r.error);
       else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
-      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT")}.${r.missingInvoices?.length ? ` Faturas anunciadas pela Mia ainda por importar: ${r.missingInvoices.join(", ")}.` : ""}`); router.refresh(); }
+      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.${r.missingInvoices?.length ? ` Faturas anunciadas pela Mia ainda por importar: ${r.missingInvoices.join(", ")}.` : ""}`); router.refresh(); }
     });
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
