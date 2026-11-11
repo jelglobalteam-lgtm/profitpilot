@@ -86,3 +86,17 @@ test("exportação do WhatsApp: ordem mês/dia, PM e datas futuras", async () =>
   const eu = parseWhatsAppExport("08/11/2026, 14:05 - Mia: a\n13/10/2026, 09:00 - Mia: b", now);
   assert.equal(eu[0].at.toISOString(), "2026-11-08T14:05:00.000Z");
 });
+
+import { prepaidBalance } from "../src/lib/cs-invoices.ts";
+
+test("saldo anterior da Mia substitui as faturas anteriores à sua data", () => {
+  const base = { id: "x", dueDate: null, currency: "EUR", paid: true, quantity: null, orderFrom: null, orderTo: null, miaBalance: null, periodFrom: null, periodTo: null, lines: [], notes: "", appSpend: null };
+  const old = { ...base, kind: "mia_imposto" as const, number: "F0", amount: 193, issueDate: "2026-11-05T00:00:00Z" };
+  const open = { ...base, kind: "mia_recarga" as const, number: "Saldo anterior (segundo a Mia, 07/11/2026)", amount: 139.66, issueDate: "2026-11-06T12:00:00Z" };
+  const a = { ...base, kind: "mia_imposto" as const, number: "F1", amount: 105, issueDate: "2026-11-07T00:00:00Z" };
+  const b = { ...base, kind: "mia_imposto" as const, number: "F2", amount: 50, issueDate: "2026-11-09T00:00:00Z" };
+  const rec = { ...base, kind: "mia_recarga" as const, number: "Recarga", amount: 89.11, issueDate: "2026-11-10T00:00:00Z" };
+  const c = { ...base, kind: "mia_imposto" as const, number: "F3", amount: 70, issueDate: "2026-11-10T00:00:00Z" };
+  assert.equal(prepaidBalance([old, open, a, b, rec, c]), 3.77);
+  assert.equal(prepaidBalance([old, open, a]), 34.66);
+});

@@ -16,6 +16,8 @@ const CsInvoiceSchema = new Schema(
     dueDate: { type: Date, default: null },
     currency: { type: String, default: "EUR" },
     amount: { type: Number, required: true },
+    /** Loja a que a fatura pertence ("Store Name" do PDF da Mia). */
+    storeName: { type: String, default: "" },
     paid: { type: Boolean, default: false },
     quantity: { type: Number, default: null },
     orderFrom: { type: Number, default: null },

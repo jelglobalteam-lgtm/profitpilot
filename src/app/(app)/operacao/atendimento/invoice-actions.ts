@@ -52,7 +52,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CsInvoice } from "@/models/CsInvoice";
 import { CsInvoiceUpload } from "@/models/CsInvoiceUpload";
-import { INVOICE_KINDS } from "@/lib/cs-invoices";
+import { INVOICE_KINDS, RIVASYLT_IT_STORE_ID } from "@/lib/cs-invoices";
 
 const invoiceSchema = z.object({
   kind: z.enum(INVOICE_KINDS),
@@ -160,6 +160,10 @@ export async function importInvoicePdfAction(formData: FormData): Promise<{ save
   const range = flat.match(/Orders range\s+#?(\d{4})(?:-[A-Z])?\s*-\s*#?(\d{4})/i);
   const qty = flat.match(/Orders quantity\s+(\d{1,4})/i);
   const amount = flat.match(/EU Customs Duty\s*€\s*(\d+(?:[.,]\d{1,2})?)/i);
+  const store = flat.match(/Store Name\s+([\w-]+)/i);
+  if (store && store[1].toLowerCase() !== RIVASYLT_IT_STORE_ID) {
+    return { error: `Esta fatura é da loja ${store[1]}, não da RivaSylt IT (${RIVASYLT_IT_STORE_ID}). Não foi registada.` };
+  }
   const upload = await CsInvoiceUpload.create({
     workspaceId: wid,
     fileName: file.name.slice(0, 200),
@@ -176,6 +180,7 @@ export async function importInvoicePdfAction(formData: FormData): Promise<{ save
     await CsInvoice.create({
       workspaceId: wid,
       kind: "mia_imposto",
+      storeName: store ? store[1] : "",
       number: full,
       issueDate: new Date(date[1]),
       currency: "EUR",

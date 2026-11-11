@@ -1,5 +1,11 @@
 import { euCustomsFeePerOrderEurForDay } from "@/lib/eu-category-fees-types";
 export const INVOICE_KINDS = ["mia_imposto", "mia_recarga", "agencia_google"] as const;
+/** Identificador da loja RivaSylt IT nas faturas da Mia ("Store Name" no PDF). */
+export const RIVASYLT_IT_STORE_ID = "7ff85d-50";
+
+/** Recarga que é na verdade o saldo que a Mia indica numa data: já inclui as faturas anteriores. */
+export const isOpeningBalance = (i: { kind: string; number: string }) => i.kind === "mia_recarga" && /^saldo anterior/i.test(i.number);
+
 export type InvoiceKind = (typeof INVOICE_KINDS)[number];
 
 export const INVOICE_KIND_LABEL: Record<InvoiceKind, string> = {
@@ -39,9 +45,14 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /** Saldo pré-pago de impostos: recargas menos faturas de imposto, por ordem de data. */
 export function prepaidBalance(invoices: InvoiceView[]): number {
-  return round2(
-    invoices.reduce((s, i) => s + (i.kind === "mia_recarga" ? i.amount : i.kind === "mia_imposto" ? -i.amount : 0), 0),
-  );
+  const sorted = [...invoices].sort((a, b) => a.issueDate.localeCompare(b.issueDate));
+  let run = 0;
+  for (const i of sorted) {
+    if (isOpeningBalance(i)) run = i.amount;
+    else if (i.kind === "mia_recarga") run += i.amount;
+    else if (i.kind === "mia_imposto") run -= i.amount;
+  }
+  return round2(run);
 }
 
 export function checkInvoices(invoices: InvoiceView[], now = Date.now()): InvoiceIssue[] {
@@ -58,7 +69,8 @@ export function checkInvoices(invoices: InvoiceView[], now = Date.now()): Invoic
     if (seen.has(dupKey)) out.push({ invoiceId: inv.id, level: "alto", message: `A fatura ${inv.number} está registada duas vezes.` });
     seen.set(dupKey, inv);
 
-    if (inv.kind === "mia_recarga") running += inv.amount;
+    if (isOpeningBalance(inv)) running = inv.amount;
+    else if (inv.kind === "mia_recarga") running += inv.amount;
     if (inv.kind === "mia_imposto") {
       running -= inv.amount;
       if (inv.quantity && inv.quantity > 0) {
