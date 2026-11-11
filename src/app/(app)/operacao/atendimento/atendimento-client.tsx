@@ -111,7 +111,7 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
           { id: "precos", label: "Preços", badge: withBang("precos", pill(quotes.filter((q) => q.status === "por_pedir").length)) },
           { id: "envios", label: "Envios", badge: withBang("envios", pill(shipments.filter((s) => shipmentAlert({ status: s.status, lastEventAt: s.lastEventAt ? new Date(s.lastEventAt) : null, orderedAt: s.orderedAt ? new Date(s.orderedAt) : null })).length)) },
           { id: "faturas", label: "Faturas", badge: withBang("faturas", pill(invoices.issues.filter((i) => i.level === "alto").length)) },
-          { id: "prazos", label: "Prazos e alertas", badge: withBang("prazos", pill(alerts.length), alerts.length > 0) },
+          { id: "prazos", label: "Prazos e alertas", badge: withBang("prazos", pill(alerts.length), alerts.some((a) => a.level === "critico")) },
           { id: "geral", label: "Visão geral" },
         ]}
       />
