@@ -653,7 +653,7 @@ function MiaChatImport() {
       const r = await importMiaChatAction({ text: body, miaName: name });
       if (r.error) setMsg(r.error);
       else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
-      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.${r.missingInvoices?.length ? ` Faturas anunciadas pela Mia ainda por importar: ${r.missingInvoices.join(", ")}.` : ""}`); router.refresh(); }
+      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.${r.missingInvoices?.length ? ` Há ${r.missingInvoices.length} faturas anunciadas pela Mia por importar; veja o separador Faturas.` : ""}`); router.refresh(); }
     });
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
