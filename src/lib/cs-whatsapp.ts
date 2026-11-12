@@ -75,30 +75,3 @@ export function parseMiaInvoiceNotes(messages: WhatsAppMessage[], miaName: strin
   }
   return notes;
 }
-
-export type OpenMiaQuestion = { id: string; text: string; sentAt: Date };
-export type MiaReplyLink = { questionId: string; reply: string; at: Date };
-
-const orderNumbers = (s: string) => new Set([...s.matchAll(/#\s?(\d{3,6})\b/g)].map((m) => m[1]));
-
-/**
- * Liga respostas da Mia a pedidos em aberto, só quando a resposta cita o número da encomenda (#1081) que o pedido também cita
- * e foi escrita depois de o pedido ser enviado. Respostas sem número ficam por ligar (ambíguas). Função pura.
- */
-export function linkMiaReplies(replies: { text: string; at: Date }[], questions: OpenMiaQuestion[]): MiaReplyLink[] {
-  const out: MiaReplyLink[] = [];
-  const used = new Set<string>();
-  for (const r of [...replies].sort((a, b) => a.at.getTime() - b.at.getTime())) {
-    const nums = orderNumbers(r.text);
-    if (nums.size === 0) continue;
-    for (const q of questions) {
-      if (used.has(q.id) || q.sentAt.getTime() > r.at.getTime()) continue;
-      const qn = orderNumbers(q.text);
-      if ([...nums].some((n) => qn.has(n))) {
-        used.add(q.id);
-        out.push({ questionId: q.id, reply: r.text, at: r.at });
-      }
-    }
-  }
-  return out;
-}
