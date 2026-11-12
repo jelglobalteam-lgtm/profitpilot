@@ -34,11 +34,15 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     complaintReason: d.complaintReason ?? "",
     orderValue: d.orderValue ?? "",
     trackingStatus: d.trackingStatus ?? "",
-    timeline: (d.timeline ?? []).map((t, i) => ({
-      n: t.n || i + 1,
-      at: t.at ? new Date(t.at).toISOString() : null,
-      summary: t.summary || t.text || "",
-    })),
+    // Tolera entradas mal gravadas: arrays aninhados (achatam-se) e datas inválidas (ficam sem data).
+    timeline: ((d.timeline ?? []) as unknown[]).flat().filter((t): t is NonNullable<CsCaseDoc["timeline"]>[number] => !!t && typeof t === "object").map((t, i) => {
+      const at = t.at ? new Date(t.at) : null;
+      return {
+        n: t.n || i + 1,
+        at: at && !Number.isNaN(at.getTime()) ? at.toISOString() : null,
+        summary: t.summary || t.text || "",
+      };
+    }),
     offered: d.offered ?? "",
     requests: d.requests ?? "",
     lastCustomerEmailOriginal: d.lastCustomerEmailOriginal ?? "",
