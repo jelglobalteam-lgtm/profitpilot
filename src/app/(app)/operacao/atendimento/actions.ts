@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import { roleRank } from "@/lib/rbac";
-import { parseWhatsAppExport, parseMiaInvoiceNotes, whatsAppSenders } from "@/lib/cs-whatsapp";
+import { parseWhatsAppExport, parseMiaInvoiceNotes, whatsAppSenders, linkMiaReplies } from "@/lib/cs-whatsapp";
 import { CsInvoice } from "@/models/CsInvoice";
 import { CsMiaInvoiceNote } from "@/models/CsMiaInvoiceNote";
 import { CsMiaCoverage } from "@/models/CsMiaCoverage";
@@ -266,7 +266,7 @@ export async function quickCsActionAction(input: z.infer<typeof quickSchema>): P
 }
 
 /** Importa a conversa da Mia (ficheiro .txt exportado do WhatsApp): grava as mensagens novas da Mia e atualiza até onde está lida. */
-export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; until?: string; missingInvoices?: string[] }> {
+export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; linked?: number; until?: string; missingInvoices?: string[] }> {
   const { user, error } = await editor();
   if (error) return { error };
   if (typeof input.text !== "string" || input.text.length === 0 || input.text.length > 5_000_000) return { error: "Ficheiro inválido." };
@@ -284,6 +284,24 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     await CsMiaMessage.insertMany(
       fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, reviewed: false, createdAt: m.at })),
     );
+  }
+  // Liga as respostas que citam o número da encomenda aos pedidos já enviados e sem resposta.
+  let linked = 0;
+  if (fromMia.length) {
+    const open = await CsMiaMessage.find({ workspaceId: wid, direction: "pergunta", status: "enviada", deletedAt: null })
+      .select("textEn textPt updatedAt")
+      .lean();
+    const links = linkMiaReplies(
+      fromMia.map((m) => ({ text: m.text, at: m.at })),
+      open.map((o) => ({ id: String(o._id), text: `${o.textEn ?? ""} ${o.textPt ?? ""}`, sentAt: o.updatedAt as Date })),
+    );
+    for (const l of links) {
+      await CsMiaMessage.updateOne(
+        { _id: l.questionId, workspaceId: wid },
+        { $set: { status: "respondida", reply: `${l.at.toISOString().slice(0, 16).replace("T", " ")}: ${l.reply}`.slice(0, 2000) } },
+      );
+    }
+    linked = links.length;
   }
   const last = messages.reduce((a, m) => (m.at > a ? m.at : a), messages[0].at);
   await CsMiaCoverage.updateOne(
@@ -309,7 +327,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     if (n.balance != null) await CsInvoice.updateOne({ _id: found._id }, { $set: { miaBalance: n.balance } });
   }
   revalidatePath("/operacao/atendimento");
-  return { ok: true, imported: fromMia.length, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
+  return { ok: true, imported: fromMia.length, linked, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
 }
 
 /** Marca como revistas as respostas da Mia importadas (depois de ver se resolvem perguntas pendentes ou trazem pedidos novos). */
