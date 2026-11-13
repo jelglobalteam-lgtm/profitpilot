@@ -16,7 +16,8 @@ import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
 import { CsMiaMessage } from "@/models/CsMiaMessage";
 import { CsEvent } from "@/models/CsEvent";
-import { CS_QUICK_ACTIONS } from "@/lib/cs-types";
+import { CS_QUICK_ACTIONS, type CsStoreKey } from "@/lib/cs-types";
+import { compensationError } from "@/lib/cs-compensation";
 
 type Result = { ok?: boolean; error?: string };
 
@@ -34,11 +35,14 @@ const decideSchema = z.object({
   decision: z.enum(["aprovado", "aprovado_com_edicao", "rejeitado", "escalado"]),
   note: z.string().max(4000).default(""),
   editedReply: z.string().max(10000).optional(),
+  /** O Emanuel confirmou no aviso a compensação proposta no caso. */
+  confirmCompensation: z.boolean().optional(),
 });
 
 /**
  * Regista a decisão do Emanuel. Não envia nada: o Claude lê as decisões
- * (cs_cases) e responde no email. Reembolsos ficam sempre manuais.
+ * (cs_cases) e responde no email. Uma compensação (reembolso parcial, crédito ou
+ * cancelamento) só fica executável depois da confirmação explícita aqui.
  */
 export async function decideCsCaseAction(
   input: z.input<typeof decideSchema>,
@@ -53,7 +57,14 @@ export async function decideCsCaseAction(
   const c = await CsCase.findOne({ _id: p.data.caseId, workspaceId: wid });
   if (!c) return { error: "Caso não encontrado." };
 
-  const { decision, note, editedReply } = p.data;
+  const { decision, note, editedReply, confirmCompensation } = p.data;
+  const approving = decision === "aprovado" || decision === "aprovado_com_edicao";
+  const comp = c.compensation;
+  if (approving && comp?.status === "proposta") {
+    if (!confirmCompensation) return { error: "Confirme a compensação proposta antes de aprovar." };
+    const bad = compensationError(comp.kind, comp.percent, c.store as CsStoreKey);
+    if (bad) return { error: bad };
+  }
   const set: Record<string, unknown> = {
     decision,
     managerNote: note,
@@ -61,6 +72,12 @@ export async function decideCsCaseAction(
     decidedBy: new mongoose.Types.ObjectId(user.id),
   };
   if (decision === "aprovado_com_edicao" && editedReply) set.proposedReply = editedReply;
+  // Só a confirmação na app torna a compensação executável pela rotina; rejeitar ou escalar não a confirma.
+  if (approving && comp?.status === "proposta") {
+    set["compensation.status"] = "confirmada";
+    set["compensation.confirmedAt"] = new Date();
+    set["compensation.confirmedBy"] = new mongoose.Types.ObjectId(user.id);
+  }
   if (decision === "escalado") set.status = "escalar";
   else if (decision === "rejeitado") set.status = "para_aprovar";
   else set.status = c.status === "reembolso" ? "reembolso" : "para_aprovar";

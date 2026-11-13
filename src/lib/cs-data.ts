@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import { CsCase, type CsCaseDoc } from "@/models/CsCase";
 import { CsTemplate, type CsTemplateDoc } from "@/models/CsTemplate";
 import { CsMiaMessage, type CsMiaMessageDoc } from "@/models/CsMiaMessage";
+import type { CompensationStatus } from "@/lib/cs-compensation";
 import { CS_SEED_TEMPLATES } from "@/lib/cs-seed";
 import type {
   CsCaseView,
@@ -54,6 +55,25 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
     managerNote: d.managerNote ?? "",
     decisionQuestion: d.decisionQuestion ?? "",
     decision: (d.decision as CsDecision | null) ?? null,
+    compensation: d.compensation
+      ? {
+          kind: d.compensation.kind,
+          percent: d.compensation.percent,
+          amount: d.compensation.amount,
+          status: d.compensation.status as CompensationStatus,
+          executedAt: d.compensation.executedAt ? new Date(d.compensation.executedAt).toISOString() : null,
+          transactionId: d.compensation.transactionId ?? "",
+          error: d.compensation.error ?? "",
+        }
+      : null,
+    pfDispute: d.pfDispute
+      ? {
+          status: d.pfDispute.status ?? "aberta",
+          openedAt: d.pfDispute.openedAt ? new Date(d.pfDispute.openedAt).toISOString() : null,
+          supplierReply: d.pfDispute.supplierReply ?? "",
+          inOurInterest: d.pfDispute.inOurInterest ?? null,
+        }
+      : null,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
     createdAt: new Date(d.createdAt ?? d.openedAt).toISOString(),

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { COMPENSATION_KINDS, COMPENSATION_STATUSES } from "@/lib/cs-compensation";
 import {
   CS_CLASSES,
   CS_DECISIONS,
@@ -14,6 +15,34 @@ const TimelineSchema = new Schema(
     summary: { type: String, default: "" },
     /** Entradas antigas gravadas com "text" em vez de "summary". */
     text: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
+const CompensationSchema = new Schema(
+  {
+    kind: { type: String, enum: COMPENSATION_KINDS, required: true },
+    percent: { type: Number, required: true },
+    amount: { type: Number, required: true },
+    status: { type: String, enum: COMPENSATION_STATUSES, default: "proposta" },
+    confirmedAt: { type: Date, default: null },
+    confirmedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    executedAt: { type: Date, default: null },
+    transactionId: { type: String, default: "" },
+    error: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
+/** Disputa aberta por nós no PrimeFlow, para o Emanuel a ver e a rotina a acompanhar. */
+const PfDisputeSchema = new Schema(
+  {
+    status: { type: String, enum: ["aberta", "resposta_recebida", "resolvida", "recusada"], default: "aberta" },
+    openedAt: { type: Date, default: null },
+    lastCheckedAt: { type: Date, default: null },
+    supplierReply: { type: String, default: "" },
+    /** A resposta do fornecedor serve-nos (reembolso) ou não (alternativa que não aceitámos). */
+    inOurInterest: { type: Boolean, default: null },
   },
   { _id: false },
 );
@@ -55,6 +84,8 @@ const CsCaseSchema = new Schema(
     managerNote: { type: String, default: "" },
     decisionQuestion: { type: String, default: "" },
     decision: { type: String, enum: [...CS_DECISIONS, null], default: null },
+    compensation: { type: CompensationSchema, default: null },
+    pfDispute: { type: PfDisputeSchema, default: null },
     decidedAt: { type: Date, default: null },
     decidedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     openedAt: { type: Date, default: () => new Date() },

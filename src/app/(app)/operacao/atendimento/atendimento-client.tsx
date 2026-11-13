@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmationText } from "@/lib/cs-compensation";
 import { miaBatchMessage } from "@/lib/cs-quotes";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -283,7 +284,20 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
   const [reason, setReason] = useState("");
   const [reply, setReply] = useState(c.proposedReply);
   const [decisionText, setDecisionText] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const comp = c.compensation;
+  const needsConfirm = comp?.status === "proposta";
   const edited = reply !== c.proposedReply;
+  const approve = (confirmCompensation: boolean) =>
+    run(() =>
+      decideCsCaseAction({
+        caseId: c.id,
+        decision: edited ? "aprovado_com_edicao" : "aprovado",
+        note: decisionText.trim() || c.managerNote,
+        editedReply: edited ? reply : undefined,
+        confirmCompensation,
+      }),
+    );
   const refundLocked = c.status === "reembolso" || c.classification === "vermelho";
 
   return (
@@ -310,6 +324,30 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
             placeholder="A sua decisão (fica registada e eu ajusto a resposta)"
             className="w-full rounded-lg border border-border bg-background p-2 text-sm"
           />
+        </div>
+      )}
+      {c.pfDispute && c.pfDispute.status !== "resolvida" && (
+        <div className="rounded-lg border border-warning/60 bg-warning/10 p-3 text-sm">
+          <p className="font-medium">Disputa pendente do nosso lado no PrimeFlow ({c.pfDispute.status.replace(/_/g, " ")})</p>
+          {c.pfDispute.supplierReply && (
+            <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+              Resposta do fornecedor ({c.pfDispute.inOurInterest === false ? "não nos serve" : c.pfDispute.inOurInterest ? "serve-nos" : "por avaliar"}): {c.pfDispute.supplierReply}
+            </p>
+          )}
+        </div>
+      )}
+      {comp && (
+        <div className="rounded-lg border border-border p-3 text-sm">
+          <p className="font-medium">
+            {comp.kind === "cancelamento" ? "Cancelamento com reembolso total" : comp.kind === "credito" ? "Crédito de loja" : "Reembolso parcial"}: {comp.percent}% ({comp.amount.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })})
+          </p>
+          <p className="text-muted-foreground">
+            {comp.status === "proposta" && "Por confirmar: só é executado depois de aprovar e confirmar."}
+            {comp.status === "confirmada" && "Confirmado: a rotina executa no Shopify na próxima execução."}
+            {comp.status === "em_execucao" && "A executar."}
+            {comp.status === "executada" && `Executado${comp.transactionId ? ` (${comp.transactionId})` : ""}.`}
+            {comp.status === "falhada" && `Falhou: ${comp.error || "ver cronologia"}. Trate manualmente.`}
+          </p>
         </div>
       )}
       <Field label="Último email do cliente (PT)">{c.lastCustomerEmailPt}</Field>
@@ -353,7 +391,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
 
       {refundLocked && (
         <p className="text-xs text-warning">
-          Reembolsos e casos vermelhos são sempre decididos por si. Aprovar regista a decisão, não executa nada.
+          Reembolsos e casos vermelhos são sempre decididos por si. Sem compensação confirmada, aprovar não executa nada no Shopify.
         </p>
       )}
       {c.decision && (
@@ -366,16 +404,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() =>
-              run(() =>
-                decideCsCaseAction({
-                  caseId: c.id,
-                  decision: edited ? "aprovado_com_edicao" : "aprovado",
-                  note: decisionText.trim() || c.managerNote,
-                  editedReply: edited ? reply : undefined,
-                }),
-              )
-            }
+            onClick={() => (needsConfirm ? setConfirming(true) : approve(false))}
             className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
           >
             {edited ? "Aprovar com edição" : "Aprovar"}
@@ -412,6 +441,31 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
               Marcar como tratado
             </button>
           )}
+        </div>
+      )}
+      {confirming && comp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md space-y-3 rounded-lg border border-border bg-surface p-4">
+            <h3 className="text-base font-semibold">Confirmar compensação</h3>
+            <p className="text-sm">{confirmationText(comp, c.orderNumber)}</p>
+            <p className="text-xs text-muted-foreground">Depois de confirmar, a rotina executa no Shopify uma única vez.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setConfirming(false)} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setConfirming(false);
+                  approve(true);
+                }}
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
+              >
+                Sim, confirmo
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {dialog && (

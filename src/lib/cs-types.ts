@@ -1,3 +1,4 @@
+import type { CompensationView } from "@/lib/cs-compensation";
 export const CS_STORES = ["rivasylt-de", "rivasylt-it", "alma-vicentina"] as const;
 export type CsStoreKey = (typeof CS_STORES)[number];
 
@@ -107,6 +108,8 @@ export type CsCaseView = {
   managerNote: string;
   decisionQuestion: string;
   decision: CsDecision | null;
+  compensation: CompensationView | null;
+  pfDispute: { status: string; openedAt: string | null; supplierReply: string; inOurInterest: boolean | null } | null;
   ageDays: number;
   openedAt: string;
   createdAt: string;
