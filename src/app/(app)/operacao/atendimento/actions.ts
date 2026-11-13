@@ -104,7 +104,7 @@ export async function decideCsCaseAction(
   return { ok: true };
 }
 
-const closeSchema = z.object({ caseId: z.string().min(1) });
+const closeSchema = z.object({ caseId: z.string().min(1), addressAdjusted: z.boolean().optional() });
 
 /** Marca como tratado um caso escalado ou de reembolso, depois de o Emanuel o resolver. */
 export async function closeCsCaseAction(input: z.infer<typeof closeSchema>): Promise<Result> {
@@ -116,14 +116,19 @@ export async function closeCsCaseAction(input: z.infer<typeof closeSchema>): Pro
   const wid = new mongoose.Types.ObjectId(user.workspaceId);
   const c = await CsCase.findOneAndUpdate(
     { _id: p.data.caseId, workspaceId: wid },
-    { $set: { status: "resolvido" } },
+    p.data.addressAdjusted
+      ? {
+          $set: { status: "resolvido" },
+          $push: { timeline: { at: new Date(), n: 0, summary: "Morada ajustada na PrimeFlow (confirmado pelo Emanuel)" } },
+        }
+      : { $set: { status: "resolvido" } },
   );
   if (!c) return { error: "Caso não encontrado." };
   await CsEvent.create({
     workspaceId: wid,
     caseId: c._id,
     type: "concluido",
-    note: "",
+    note: p.data.addressAdjusted ? "Morada ajustada na PrimeFlow" : "",
     actorId: new mongoose.Types.ObjectId(user.id),
   });
   revalidatePath("/operacao/atendimento");

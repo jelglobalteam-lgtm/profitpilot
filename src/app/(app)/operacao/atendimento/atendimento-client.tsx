@@ -431,6 +431,16 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           >
             Escalar
           </button>
+          {isAddress(c) && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => closeCsCaseAction({ caseId: c.id, addressAdjusted: true }))}
+              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
+            >
+              Já ajustado na PrimeFlow
+            </button>
+          )}
           {(c.status === "escalar" || c.status === "reembolso") && (
             <button
               type="button"
