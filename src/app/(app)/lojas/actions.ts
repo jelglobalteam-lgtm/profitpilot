@@ -19,6 +19,7 @@ import {
 import {
   formatMissingScopesMessage,
   missingShopifyScopes,
+  SHOPIFY_CORE_SCOPES,
   parseShopifyScopeList,
 } from "@/lib/shopify-scopes";
 import { syncStore } from "@/lib/shopify-sync";
@@ -145,7 +146,7 @@ export async function addStoreAction(
       clientId,
       clientSecret,
     );
-    const missing = missingShopifyScopes(token.scope);
+    const missing = missingShopifyScopes(token.scope, SHOPIFY_CORE_SCOPES);
     if (missing.length > 0) {
       return { error: formatMissingScopesMessage(missing) };
     }

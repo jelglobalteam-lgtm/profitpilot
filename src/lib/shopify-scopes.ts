@@ -14,6 +14,19 @@ export const SHOPIFY_REQUIRED_SCOPES = [
   "read_reports",
 ] as const;
 
+/**
+ * Mínimo para ligar uma loja. read_all_orders e os scopes de Shopify Payments
+ * são opcionais (lojas novas / sem Payments); a sync trata a falta deles.
+ */
+export const SHOPIFY_CORE_SCOPES = [
+  "read_orders",
+  "read_products",
+  "read_inventory",
+  "read_fulfillments",
+  "read_returns",
+  "read_reports",
+] as const;
+
 export const SHOPIFY_PAYOUTS_SCOPES = [
   "read_shopify_payments_accounts",
   "read_shopify_payments_payouts",
@@ -33,7 +46,12 @@ export function missingShopifyScopes(
   required: readonly string[] = SHOPIFY_REQUIRED_SCOPES,
 ): string[] {
   const granted = parseShopifyScopeList(grantedScope);
-  return required.filter((s) => !granted.has(s));
+  // A Shopify omite read_X quando write_X está concedido (write implica read).
+  return required.filter((s) => {
+    if (granted.has(s)) return false;
+    if (s.startsWith("read_") && granted.has(`write_${s.slice(5)}`)) return false;
+    return true;
+  });
 }
 
 export function formatMissingScopesMessage(missing: string[]): string {
