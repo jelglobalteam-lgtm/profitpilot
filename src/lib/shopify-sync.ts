@@ -108,7 +108,7 @@ export async function persistStoreSyncFields(
 type GraphQLResult<T> = { data?: T; errors?: Array<{ message: string }> };
 
 /** Lê e desencripta as credenciais guardadas da loja (client id/secret). */
-function getStoreCredentials(store: StoreDoc): {
+export function getStoreCredentials(store: StoreDoc): {
   clientId: string;
   clientSecret: string;
 } {

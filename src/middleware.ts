@@ -61,6 +61,7 @@ export function middleware(request: NextRequest) {
   // Cron e webhooks — autenticação própria na route (HMAC / CRON_SECRET).
   if (
     pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/mcp/") ||
     pathname.startsWith("/api/webhooks/")
   ) {
     return applySecurityHeaders(NextResponse.next());
