@@ -308,7 +308,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     );
   }
   // As mensagens do próprio Emanuel na conversa: um rascunho cuja encomenda ele já citou depois de o criar passa a enviado.
-  const fromMe = fresh.filter((m) => m.sender.toLowerCase() !== name);
+  const fromMe = messages.filter((m) => m.sender.toLowerCase() !== name);
   let markedSent = 0;
   if (fromMe.length) {
     const drafts = await CsMiaMessage.find({ workspaceId: wid, direction: "pergunta", status: "rascunho", deletedAt: null })
