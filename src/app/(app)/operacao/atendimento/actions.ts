@@ -288,7 +288,7 @@ export async function quickCsActionAction(input: z.infer<typeof quickSchema>): P
 }
 
 /** Importa a conversa da Mia (ficheiro .txt exportado do WhatsApp): grava as mensagens novas da Mia e atualiza até onde está lida. */
-export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; linked?: number; until?: string; missingInvoices?: string[] }> {
+export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; linked?: number; markedSent?: number; until?: string; missingInvoices?: string[] }> {
   const { user, error } = await editor();
   if (error) return { error };
   if (typeof input.text !== "string" || input.text.length === 0 || input.text.length > 5_000_000) return { error: "Ficheiro inválido." };
@@ -306,6 +306,36 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     await CsMiaMessage.insertMany(
       fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, reviewed: false, createdAt: m.at })),
     );
+  }
+  // As mensagens do próprio Emanuel na conversa: um rascunho cuja encomenda ele já citou depois de o criar passa a enviado.
+  const fromMe = fresh.filter((m) => m.sender.toLowerCase() !== name);
+  let markedSent = 0;
+  if (fromMe.length) {
+    const drafts = await CsMiaMessage.find({ workspaceId: wid, direction: "pergunta", status: "rascunho", deletedAt: null })
+      .select("textEn textPt createdAt caseId")
+      .lean();
+    const sent = linkMiaReplies(
+      fromMe.map((m) => ({ text: m.text, at: m.at })),
+      drafts.map((d) => ({ id: String(d._id), text: `${d.textEn ?? ""} ${d.textPt ?? ""}`, sentAt: d.createdAt as Date })),
+    );
+    for (const l of sent) {
+      await CsMiaMessage.updateOne(
+        { _id: l.questionId, workspaceId: wid },
+        { $set: { status: "enviada", updatedAt: l.at } },
+        { timestamps: false },
+      );
+      const d = drafts.find((x) => String(x._id) === l.questionId);
+      if (d?.caseId) {
+        const c = await CsCase.findOne({ _id: d.caseId, workspaceId: wid }).select("timeline").lean();
+        if (c) {
+          await CsCase.updateOne(
+            { _id: d.caseId },
+            { $set: { status: "a_aguardar_fornecedor" }, $push: { timeline: { at: l.at, n: ((c.timeline ?? []).length as number) + 1, summary: "Pedido enviado à Mia (detetado na conversa importada). A aguardar resposta." } } },
+          );
+        }
+      }
+    }
+    markedSent = sent.length;
   }
   // Liga as respostas que citam o número da encomenda aos pedidos já enviados e sem resposta.
   let linked = 0;
@@ -349,7 +379,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     if (n.balance != null) await CsInvoice.updateOne({ _id: found._id }, { $set: { miaBalance: n.balance } });
   }
   revalidatePath("/operacao/atendimento");
-  return { ok: true, imported: fromMia.length, linked, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
+  return { ok: true, imported: fromMia.length, linked, markedSent, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
 }
 
 /** Marca como revistas as respostas da Mia importadas (depois de ver se resolvem perguntas pendentes ou trazem pedidos novos). */
