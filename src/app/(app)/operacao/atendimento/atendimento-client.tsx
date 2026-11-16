@@ -161,10 +161,10 @@ function isAddress(c: CsCaseView): boolean {
   return c.issueType === "alteracao_morada" && c.status !== "resolvido" && c.status !== "respondido";
 }
 
-/** Casos que esperam uma decisão do Emanuel: para aprovar, escalados e reembolsos. */
+/** Casos que esperam uma ação do Emanuel: para aprovar, escalados, reembolsos e moradas por ajustar na PrimeFlow. */
 function isPending(c: CsCaseView): boolean {
   const g = groupOf(c);
-  return g === "para_aprovar" || g === "escalar" || g === "reembolso";
+  return g === "para_aprovar" || g === "escalar" || g === "reembolso" || isAddress(c);
 }
 
 function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean }) {
