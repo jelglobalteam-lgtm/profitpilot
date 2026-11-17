@@ -8,6 +8,15 @@ import {
 } from "@/lib/shopify";
 import { timingSafeStringEqual } from "@/lib/timing-safe";
 import { Store } from "@/models/Store";
+import mongoose from "mongoose";
+import {
+  type BackupStore,
+  type Gql,
+  toolThemeReplace,
+  toolThemeRestore,
+  toolThemeSearch,
+  toolThemeWriteFile,
+} from "@/lib/mcp-theme";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -44,6 +53,91 @@ const TOOLS = [
         confirm: { type: "boolean" },
       },
       required: ["stores", "query"],
+    },
+  },
+  {
+    name: "theme_search",
+    description:
+      "Pesquisa texto/regex nos ficheiros de um tema Shopify, no servidor. " +
+      "Devolve ficheiro, linha e excerto. 'store': domínio ou nome da loja. " +
+      "'theme_id' opcional (omitido = tema ativo). 'files': globs opcionais (ex. [\"sections/*.liquid\"]). " +
+      "'pattern' é regex (flags por defeito 'i'); com literal=true é texto simples.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        theme_id: { type: "string" },
+        pattern: { type: "string" },
+        flags: { type: "string" },
+        literal: { type: "boolean" },
+        files: { type: "array", items: { type: "string" } },
+        context: { type: "number" },
+        max: { type: "number" },
+      },
+      required: ["store", "pattern"],
+    },
+  },
+  {
+    name: "theme_replace",
+    description:
+      "Substitui texto/regex em vários ficheiros de um tema, no servidor. " +
+      "Sem confirm=true só mostra o que mudaria. Com confirm=true grava, guarda " +
+      "cópia de segurança (devolve backupId) e recusa JSON que ficasse inválido. " +
+      "'rules': [{pattern, replacement, flags?, literal?}]. 'files': globs opcionais.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        theme_id: { type: "string" },
+        rules: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              pattern: { type: "string" },
+              replacement: { type: "string" },
+              flags: { type: "string" },
+              literal: { type: "boolean" },
+            },
+            required: ["pattern", "replacement"],
+          },
+        },
+        files: { type: "array", items: { type: "string" } },
+        confirm: { type: "boolean" },
+      },
+      required: ["store", "rules"],
+    },
+  },
+  {
+    name: "theme_write_file",
+    description:
+      "Cria ou substitui um ficheiro do tema: 'content' (texto) ou 'base64' (binário, ex. PNG em assets/). " +
+      "Sem confirm=true só pré-visualiza. Ficheiros de texto existentes ficam com cópia de segurança.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        theme_id: { type: "string" },
+        filename: { type: "string" },
+        content: { type: "string" },
+        base64: { type: "string" },
+        confirm: { type: "boolean" },
+      },
+      required: ["store", "filename"],
+    },
+  },
+  {
+    name: "theme_restore",
+    description:
+      "Repõe os ficheiros guardados numa cópia de segurança (backupId de theme_replace/theme_write_file). Requer confirm=true.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        backup_id: { type: "string" },
+        confirm: { type: "boolean" },
+      },
+      required: ["store", "backup_id"],
     },
   },
 ];
@@ -94,6 +188,33 @@ async function runOnStore(
   return res.json();
 }
 
+const BACKUPS: BackupStore = {
+  async save(backupId, themeId, files) {
+    if (!files.length) return;
+    await connectToDatabase();
+    const col = mongoose.connection.db!.collection("theme_backups");
+    await col.insertMany(
+      files.map((f) => ({
+        backupId,
+        themeId,
+        filename: f.filename,
+        content: f.content,
+        createdAt: new Date(),
+      })),
+    );
+  },
+  async load(backupId) {
+    await connectToDatabase();
+    const col = mongoose.connection.db!.collection("theme_backups");
+    const docs = await col.find({ backupId }).toArray();
+    return docs.map((d) => ({
+      themeId: String(d.themeId),
+      filename: String(d.filename),
+      content: String(d.content),
+    }));
+  },
+};
+
 async function callTool(name: string, args: Json) {
   const stores = await loadStores();
   if (name === "list_stores") {
@@ -141,6 +262,26 @@ async function callTool(name: string, args: Json) {
         };
       }
     }
+    return text(JSON.stringify(out, null, 2));
+  }
+  if (name.startsWith("theme_")) {
+    const wanted = String(args.store ?? "").toLowerCase();
+    const store = stores.find(
+      (s) =>
+        (s.shopDomain ?? "").toLowerCase() === wanted ||
+        s.name.toLowerCase() === wanted,
+    );
+    if (!store) return text("Nenhuma loja corresponde.", true);
+    const gql: Gql = (query, variables) => runOnStore(store, query, variables);
+    let out: unknown;
+    if (name === "theme_search") out = await toolThemeSearch(gql, args);
+    else if (name === "theme_replace")
+      out = await toolThemeReplace(gql, BACKUPS, args);
+    else if (name === "theme_write_file")
+      out = await toolThemeWriteFile(gql, BACKUPS, args);
+    else if (name === "theme_restore")
+      out = await toolThemeRestore(gql, BACKUPS, args);
+    else return text(`Ferramenta desconhecida: ${name}`, true);
     return text(JSON.stringify(out, null, 2));
   }
   return text(`Ferramenta desconhecida: ${name}`, true);
