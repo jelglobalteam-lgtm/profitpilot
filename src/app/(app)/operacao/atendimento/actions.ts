@@ -340,12 +340,13 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   // Liga as respostas que citam o número da encomenda aos pedidos já enviados e sem resposta.
   let linked = 0;
   if (fromMia.length) {
-    const open = await CsMiaMessage.find({ workspaceId: wid, direction: "pergunta", status: "enviada", deletedAt: null })
-      .select("textEn textPt updatedAt")
+    // Inclui os rascunhos ainda não enviados: se a Mia já respondeu sobre a encomenda depois de o rascunho ser criado, o pedido fica respondido e sai da mensagem junta.
+    const open = await CsMiaMessage.find({ workspaceId: wid, direction: "pergunta", status: { $in: ["enviada", "rascunho"] }, deletedAt: null })
+      .select("textEn textPt updatedAt createdAt status")
       .lean();
     const links = linkMiaReplies(
       fromMia.map((m) => ({ text: m.text, at: m.at })),
-      open.map((o) => ({ id: String(o._id), text: `${o.textEn ?? ""} ${o.textPt ?? ""}`, sentAt: o.updatedAt as Date })),
+      open.map((o) => ({ id: String(o._id), text: `${o.textEn ?? ""} ${o.textPt ?? ""}`, sentAt: (o.status === "rascunho" ? o.createdAt : o.updatedAt) as Date })),
     );
     for (const l of links) {
       await CsMiaMessage.updateOne(
