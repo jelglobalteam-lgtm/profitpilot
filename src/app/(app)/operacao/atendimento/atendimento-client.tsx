@@ -717,7 +717,7 @@ function MiaChatImport() {
       const r = await importMiaChatAction({ text: body, miaName: name });
       if (r.error) setMsg(r.error);
       else if (r.senders) { setSenders(r.senders); setMsg("Quem é a Mia nesta conversa?"); }
-      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. ${r.markedSent ? `${r.markedSent} rascunho(s) passaram a enviados, porque a conversa mostra que já os enviou. ` : ""}Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.${r.missingInvoices?.length ? ` Há ${r.missingInvoices.length} faturas anunciadas pela Mia por importar; veja o separador Faturas.` : ""}`); router.refresh(); }
+      else { setSenders([]); setText(""); setMsg(`Importado: ${r.imported ?? 0} mensagens da Mia. Conversa guardada com as suas mensagens (${r.saved ?? 0} novas). ${r.markedSent ? `${r.markedSent} rascunho(s) passaram a enviados, porque a conversa mostra que já os enviou. ` : ""}Reveja as respostas e as perguntas pendentes. Conversa lida até ${new Date(r.until as string).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.${r.missingInvoices?.length ? ` Há ${r.missingInvoices.length} faturas anunciadas pela Mia por importar; veja o separador Faturas.` : ""}`); router.refresh(); }
     });
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">

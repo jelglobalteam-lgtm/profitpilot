@@ -12,6 +12,7 @@ import { parseWhatsAppExport, parseMiaInvoiceNotes, whatsAppSenders, linkMiaRepl
 import { CsInvoice } from "@/models/CsInvoice";
 import { CsMiaInvoiceNote } from "@/models/CsMiaInvoiceNote";
 import { CsMiaCoverage } from "@/models/CsMiaCoverage";
+import { CsMiaChat } from "@/models/CsMiaChat";
 import { CsCase } from "@/models/CsCase";
 import { CsTemplate } from "@/models/CsTemplate";
 import { CsMiaMessage } from "@/models/CsMiaMessage";
@@ -288,7 +289,7 @@ export async function quickCsActionAction(input: z.infer<typeof quickSchema>): P
 }
 
 /** Importa a conversa da Mia (ficheiro .txt exportado do WhatsApp): grava as mensagens novas da Mia e atualiza até onde está lida. */
-export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; linked?: number; markedSent?: number; until?: string; missingInvoices?: string[] }> {
+export async function importMiaChatAction(input: { text: string; miaName: string }): Promise<Result & { senders?: string[]; imported?: number; saved?: number; linked?: number; markedSent?: number; until?: string; missingInvoices?: string[] }> {
   const { user, error } = await editor();
   if (error) return { error };
   if (typeof input.text !== "string" || input.text.length === 0 || input.text.length > 5_000_000) return { error: "Ficheiro inválido." };
@@ -302,6 +303,18 @@ export async function importMiaChatAction(input: { text: string; miaName: string
   const since = cov?.coveredUntil ? cov.coveredUntil.getTime() : 0;
   const fresh = messages.filter((m) => m.at.getTime() > since);
   const fromMia = fresh.filter((m) => m.sender.toLowerCase() === name);
+  // Guarda a conversa toda, as mensagens da Mia e as do Emanuel, para dar contexto à rotina (sem duplicar se for importada outra vez).
+  const chatOps = messages.map((m) => {
+    const from: "mia" | "emanuel" = m.sender.toLowerCase() === name ? "mia" : "emanuel";
+    const text = m.text.trim().slice(0, 4000);
+    const key = `${m.at.getTime()}|${from}|${text.length}|${text.slice(0, 60)}`;
+    return { updateOne: { filter: { workspaceId: wid, key }, update: { $setOnInsert: { workspaceId: wid, at: m.at, from, text, key } }, upsert: true } };
+  });
+  let saved = 0;
+  for (let i = 0; i < chatOps.length; i += 500) {
+    const r = await CsMiaChat.bulkWrite(chatOps.slice(i, i + 500), { ordered: false });
+    saved += r.upsertedCount;
+  }
   if (fromMia.length) {
     await CsMiaMessage.insertMany(
       fromMia.map((m) => ({ workspaceId: wid, direction: "pedido", status: "respondida", reply: m.text, reviewed: false, createdAt: m.at })),
@@ -380,7 +393,7 @@ export async function importMiaChatAction(input: { text: string; miaName: string
     if (n.balance != null) await CsInvoice.updateOne({ _id: found._id }, { $set: { miaBalance: n.balance } });
   }
   revalidatePath("/operacao/atendimento");
-  return { ok: true, imported: fromMia.length, linked, markedSent, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
+  return { ok: true, imported: fromMia.length, saved, linked, markedSent, until: last.toISOString(), missingInvoices: [...new Set(missing)] };
 }
 
 /** Marca como revistas as respostas da Mia importadas (depois de ver se resolvem perguntas pendentes ou trazem pedidos novos). */
