@@ -10,7 +10,7 @@ const CsTemplateSchema = new Schema(
       index: true,
     },
     number: { type: Number, required: true },
-    /** "all" ou chave da loja (rivasylt-de, rivasylt-it, alma-vicentina). */
+    /** "all" ou chave da loja (rivasylt-de, rivasylt-it, essenza-vera, monique-amsterdam, marlow-and-co, alma-vicentina). */
     store: { type: String, default: "all" },
     language: { type: String, default: "PT" },
     label: { type: String, required: true, trim: true },

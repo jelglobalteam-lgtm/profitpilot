@@ -1,10 +1,13 @@
 import type { CompensationView } from "@/lib/cs-compensation";
-export const CS_STORES = ["rivasylt-de", "rivasylt-it", "alma-vicentina"] as const;
+export const CS_STORES = ["rivasylt-de", "rivasylt-it", "essenza-vera", "monique-amsterdam", "marlow-and-co", "alma-vicentina"] as const;
 export type CsStoreKey = (typeof CS_STORES)[number];
 
 export const CS_STORE_LABEL: Record<CsStoreKey, string> = {
   "rivasylt-de": "RivaSylt DE",
   "rivasylt-it": "RivaSylt IT",
+  "essenza-vera": "Essenza Vera",
+  "monique-amsterdam": "Monique Amsterdam",
+  "marlow-and-co": "Marlow & Co",
   "alma-vicentina": "Alma Vicentina",
 };
 
