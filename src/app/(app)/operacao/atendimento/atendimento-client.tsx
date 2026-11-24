@@ -887,18 +887,24 @@ function DeadlinesTab({ alerts }: { alerts: ReturnType<typeof computeCsAlerts> }
 
 const COMPLAINT_TYPES = new Set(["qualidade", "troca_tamanho", "devolucao", "reembolso", "disputa"]);
 
+const GENERIC_SUEDE = "Casaco de camurça (modelo não identificado)";
+
 /** Nome do produto sem variante, quantidade, nº de encomenda nem segundo artigo. */
 function productName(items: string): string {
   const first = items.split(",")[0];
   const name = first
     .replace(/\([^)]*\)/g, " ") // variantes e notas entre parênteses
+    .split(/;|\.\s/)[0] // notas e segundos artigos separados por ; ou ponto
     .split(/\s\+\s/)[0] // "A + B": fica só o primeiro artigo
     .replace(/^\s*\d+\s*x\s+/i, "") // "2x "
     .replace(/^\s*#\d+\s+/, "") // "#1066 "
     .replace(/\s+x\d+$/i, "") // " x2" no fim
     .replace(/\s+/g, " ")
     .trim();
-  return name || "Sem produto";
+  if (!name || /^sem (encomenda|produto)/i.test(name)) return "Sem produto";
+  // Descrições vagas do casaco de camurça (sem nome de modelo) ficam numa só linha.
+  if (/^giacca (in|di) (camoscio|pelle scamosciata)( marrone)?$/i.test(name)) return GENERIC_SUEDE;
+  return name;
 }
 
 /** Chave para juntar o mesmo produto escrito de formas ligeiramente diferentes. */
@@ -916,9 +922,11 @@ function ProductsTab({ cases }: { cases: CsCaseView[] }) {
     const complaints = cases.filter((c) => COMPLAINT_TYPES.has(c.issueType));
     // Nomes limpos e respetivas chaves; um nome com pelo menos 3 palavras absorve os que
     // começam por ele (ex.: "... Scamosciata Brown L" fica junto de "... Scamosciata").
-    const keys = [...new Set(complaints.map((c) => productKey(productName(c.items))))].sort(
-      (a, b) => a.length - b.length,
-    );
+    const keys = [
+      ...new Set(
+        complaints.map((c) => productName(c.items)).filter((n) => n !== GENERIC_SUEDE).map(productKey),
+      ),
+    ].sort((a, b) => a.length - b.length);
     const canonical = (key: string) =>
       keys.find((k) => k.split(" ").length >= 3 && (key === k || key.startsWith(k + " "))) ?? key;
     const map = new Map<string, { name: string; total: number; week: number; reasons: Map<string, number> }>();
