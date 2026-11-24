@@ -887,26 +887,55 @@ function DeadlinesTab({ alerts }: { alerts: ReturnType<typeof computeCsAlerts> }
 
 const COMPLAINT_TYPES = new Set(["qualidade", "troca_tamanho", "devolucao", "reembolso", "disputa"]);
 
+/** Nome do produto sem variante, quantidade, nº de encomenda nem segundo artigo. */
 function productName(items: string): string {
-  return items.split(",")[0].trim() || "Sem produto";
+  const first = items.split(",")[0];
+  const name = first
+    .replace(/\([^)]*\)/g, " ") // variantes e notas entre parênteses
+    .split(/\s\+\s/)[0] // "A + B": fica só o primeiro artigo
+    .replace(/^\s*\d+\s*x\s+/i, "") // "2x "
+    .replace(/^\s*#\d+\s+/, "") // "#1066 "
+    .replace(/\s+x\d+$/i, "") // " x2" no fim
+    .replace(/\s+/g, " ")
+    .trim();
+  return name || "Sem produto";
+}
+
+/** Chave para juntar o mesmo produto escrito de formas ligeiramente diferentes. */
+function productKey(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function ProductsTab({ cases }: { cases: CsCaseView[] }) {
   const rows = useMemo(() => {
-    const map = new Map<string, { total: number; week: number; reasons: Map<string, number> }>();
-    for (const c of cases) {
-      if (!COMPLAINT_TYPES.has(c.issueType)) continue;
+    const complaints = cases.filter((c) => COMPLAINT_TYPES.has(c.issueType));
+    // Nomes limpos e respetivas chaves; um nome com pelo menos 3 palavras absorve os que
+    // começam por ele (ex.: "... Scamosciata Brown L" fica junto de "... Scamosciata").
+    const keys = [...new Set(complaints.map((c) => productKey(productName(c.items))))].sort(
+      (a, b) => a.length - b.length,
+    );
+    const canonical = (key: string) =>
+      keys.find((k) => k.split(" ").length >= 3 && (key === k || key.startsWith(k + " "))) ?? key;
+    const map = new Map<string, { name: string; total: number; week: number; reasons: Map<string, number> }>();
+    for (const c of complaints) {
       const name = productName(c.items);
-      const row = map.get(name) ?? { total: 0, week: 0, reasons: new Map() };
+      const key = canonical(productKey(name));
+      const row = map.get(key) ?? { name, total: 0, week: 0, reasons: new Map() };
+      if (name.length < row.name.length) row.name = name;
       row.total += 1;
       if (c.ageDays <= 7) row.week += 1;
       const reason = c.complaintReason.trim() || CS_ISSUE_LABEL[c.issueType];
       row.reasons.set(reason, (row.reasons.get(reason) ?? 0) + 1);
-      map.set(name, row);
+      map.set(key, row);
     }
-    return [...map.entries()]
-      .map(([name, r]) => ({
-        name,
+    return [...map.values()]
+      .map((r) => ({
+        name: r.name,
         total: r.total,
         week: r.week,
         reasons: [...r.reasons.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t),
