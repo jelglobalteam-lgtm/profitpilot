@@ -278,6 +278,80 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+
+type TlRole = "cliente" | "nos" | "decisao" | "sistema";
+
+function classifyTimeline(summary: string): TlRole {
+  const t = summary.trim();
+  if (/^(\d+\.[ºª]\s+)?(resposta\s+(aprovada\s+)?enviada|resposta nossa|pedido enviado)/i.test(t)) return "nos";
+  if (/^\d+\.[ªº]\s+resposta\s+aprovada/i.test(t)) return "nos";
+  if (/^(aprovado|rejeitado|escalado)/i.test(t)) return "decisao";
+  if (/^(\d+\.[ºª]\s+)?(email|formul[aá]rio|cliente|novo email)/i.test(t)) return "cliente";
+  return "sistema";
+}
+
+function splitSummary(summary: string): { meta: string; body: string } {
+  const i = summary.indexOf(": ");
+  if (i > 0 && i < 80) return { meta: summary.slice(0, i), body: summary.slice(i + 2) };
+  return { meta: "", body: summary };
+}
+
+const ROLE_LABEL: Record<TlRole, string> = {
+  cliente: "Cliente",
+  nos: "Nós (enviado)",
+  decisao: "Decisão",
+  sistema: "Rotina",
+};
+
+function Bubble({ role, meta, body, at }: { role: TlRole | "proposta"; meta?: string; body: string; at?: string | null }) {
+  const label = role === "proposta" ? "Resposta proposta (por aprovar)" : ROLE_LABEL[role];
+  const side = role === "cliente" ? "mr-auto" : role === "nos" || role === "proposta" ? "ml-auto" : "mx-auto";
+  const tone =
+    role === "cliente"
+      ? "border-border bg-muted/40"
+      : role === "nos"
+        ? "border-accent/40 bg-accent/15"
+        : role === "proposta"
+          ? "border-dashed border-accent bg-accent/5"
+          : role === "decisao"
+            ? "border-warning/60 bg-warning/10"
+            : "border-border bg-transparent text-muted-foreground";
+  const when = at ? new Date(at).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  return (
+    <div className={`${side} max-w-[92%] rounded-lg border p-2.5 text-sm ${tone}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
+        {label}
+        {when ? ` · ${when}` : ""}
+      </p>
+      {meta ? <p className="mt-0.5 text-xs opacity-70">{meta}</p> : null}
+      <p className="mt-1 whitespace-pre-wrap">{body}</p>
+    </div>
+  );
+}
+
+function Conversation({ c }: { c: CsCaseView }) {
+  const items = [...c.timeline].sort((a, b) => (a.n || 999) - (b.n || 999) || 0);
+  return (
+    <details open className="rounded-lg border border-border p-3 text-sm">
+      <summary className="cursor-pointer font-medium">Conversa ({items.length})</summary>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <span>Cliente à esquerda</span>
+        <span>Nós à direita</span>
+        <span>Notas da rotina e decisões ao centro</span>
+      </div>
+      <div className="mt-3 flex flex-col gap-2">
+        {items.map((t, i) => {
+          const role = classifyTimeline(t.summary);
+          const { meta, body } = splitSummary(t.summary);
+          return <Bubble key={i} role={role} meta={meta} body={body} at={t.at} />;
+        })}
+        {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
+        {c.proposedReplyPt ? <Bubble role="proposta" body={c.proposedReplyPt} /> : null}
+      </div>
+    </details>
+  );
+}
+
 function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
   const { run, pending, error } = useRun();
   const [dialog, setDialog] = useState<"rejeitado" | "escalado" | null>(null);
@@ -350,8 +424,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           </p>
         </div>
       )}
-      <Field label="Último email do cliente (PT)">{c.lastCustomerEmailPt}</Field>
-      <Field label="Resposta proposta (PT)">{c.proposedReplyPt}</Field>
+      <Conversation c={c} />
 
       <details className="rounded-lg border border-border p-3 text-sm">
         <summary className="cursor-pointer font-medium text-muted-foreground">Ver mais</summary>
@@ -362,11 +435,6 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
             <Field label="Estado e rastreio">{c.trackingStatus}</Field>
             <Field label="Template">{c.templateLabel}</Field>
           </div>
-          <Field label="Cronologia">
-            {c.timeline.length
-              ? c.timeline.map((t) => `${t.n}.º email: ${t.summary}`).join("\n\n")
-              : ""}
-          </Field>
           <Field label="Nota do Claude">{c.managerNote}</Field>
           <Field label="Ofertas feitas e recusadas">{c.offered}</Field>
           <Field label="O que o cliente pede agora">{c.requests}</Field>
