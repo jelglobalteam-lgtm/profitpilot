@@ -463,11 +463,14 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
         </p>
       )}
       {c.decision && (
-        <p className="text-xs text-muted-foreground">Última decisão: {c.decision.replace(/_/g, " ")}</p>
+        <p className="text-xs text-muted-foreground">
+          Última decisão: {c.decision.replace(/_/g, " ")}
+          {groupOf(c) === "aprovado" && ". Já aprovado, a aguardar envio pela rotina da caixa."}
+        </p>
       )}
       {error && <p className="text-sm text-negative">{error}</p>}
 
-      {canEdit && (
+      {canEdit && groupOf(c) !== "aprovado" && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

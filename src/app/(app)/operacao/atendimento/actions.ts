@@ -61,6 +61,10 @@ export async function decideCsCaseAction(
   const { decision, note, editedReply, confirmCompensation } = p.data;
   const approving = decision === "aprovado" || decision === "aprovado_com_edicao";
   const comp = c.compensation;
+  // Já aprovado e ainda por enviar: aprovar outra vez não muda nada, só confunde. A rotina limpa a decisão quando escreve nova proposta.
+  if (approving && c.status === "para_aprovar" && (c.decision === "aprovado" || c.decision === "aprovado_com_edicao")) {
+    return { error: "Este caso já está aprovado e a aguardar envio pela rotina. Não é preciso aprovar outra vez." };
+  }
   if (approving && comp?.status === "proposta") {
     if (!confirmCompensation) return { error: "Confirme a compensação proposta antes de aprovar." };
     const bad = compensationError(comp.kind, comp.percent, c.store as CsStoreKey);
