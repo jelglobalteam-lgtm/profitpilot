@@ -329,26 +329,35 @@ function Bubble({ role, meta, body, at }: { role: TlRole | "proposta"; meta?: st
   );
 }
 
+function Latest({ c }: { c: CsCaseView }) {
+  if (!c.lastCustomerEmailPt && !c.proposedReplyPt) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
+      {c.proposedReplyPt ? <Bubble role="proposta" body={c.proposedReplyPt} /> : null}
+    </div>
+  );
+}
+
 function Conversation({ c }: { c: CsCaseView }) {
   const items = [...c.timeline].sort((a, b) => (a.n || 999) - (b.n || 999) || 0);
+  if (items.length === 0) return null;
   return (
-    <details open className="rounded-lg border border-border p-3 text-sm">
-      <summary className="cursor-pointer font-medium">Conversa ({items.length})</summary>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+    <div>
+      <p className="text-[13px] font-medium text-muted-foreground">Conversa ({items.length})</p>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         <span>Cliente à esquerda</span>
         <span>Nós à direita</span>
         <span>Notas da rotina e decisões ao centro</span>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         {items.map((t, i) => {
           const role = classifyTimeline(t.summary);
           const { meta, body } = splitSummary(t.summary);
           return <Bubble key={i} role={role} meta={meta} body={body} at={t.at} />;
         })}
-        {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
-        {c.proposedReplyPt ? <Bubble role="proposta" body={c.proposedReplyPt} /> : null}
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -424,11 +433,12 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           </p>
         </div>
       )}
-      <Conversation c={c} />
+      <Latest c={c} />
 
       <details className="rounded-lg border border-border p-3 text-sm">
         <summary className="cursor-pointer font-medium text-muted-foreground">Ver mais</summary>
         <div className="mt-3 space-y-3">
+          <Conversation c={c} />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Email">{c.customerEmail}</Field>
             <Field label="Valor">{c.orderValue}</Field>
