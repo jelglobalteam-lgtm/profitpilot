@@ -62,7 +62,9 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/mcp/") ||
-    pathname.startsWith("/api/webhooks/")
+    pathname.startsWith("/api/webhooks/") ||
+    // Envio de fotografias de clientes pela rotina (chave própria na route; o GET /api/cs-images/<id> exige sessão).
+    pathname === "/api/cs-images"
   ) {
     return applySecurityHeaders(NextResponse.next());
   }
