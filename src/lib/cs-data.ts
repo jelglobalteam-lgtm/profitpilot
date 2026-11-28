@@ -85,6 +85,10 @@ function toCaseView(d: CsCaseDoc, images: { id: string; name: string }[] = []): 
         }
       : null,
     images,
+    photosLink:
+      d.photosLink?.url && /^https:\/\/mail\.hostinger\.com\//.test(d.photosLink.url)
+        ? { url: d.photosLink.url, count: d.photosLink.count ?? 0 }
+        : null,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
     createdAt: new Date(d.createdAt ?? d.openedAt).toISOString(),

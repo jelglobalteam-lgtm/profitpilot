@@ -91,6 +91,11 @@ const CsCaseSchema = new Schema(
       type: new Schema({ done: Boolean, at: Date, orderName: String, address: String, customerNotifiedAt: Date }, { _id: false }),
       default: null,
     },
+    /** Ligação para o email do cliente no webmail (onde estão as fotografias) e número de fotografias. */
+    photosLink: {
+      type: new Schema({ url: String, count: Number }, { _id: false }),
+      default: null,
+    },
     decidedAt: { type: Date, default: null },
     decidedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     openedAt: { type: Date, default: () => new Date() },

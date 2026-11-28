@@ -332,7 +332,7 @@ function Bubble({ role, meta, body, at, title }: { role: TlRole | "proposta"; me
 function Latest({ c }: { c: CsCaseView }) {
   const open = c.status === "para_aprovar" || c.status === "reembolso" || c.status === "escalar";
   const title = open ? "Resposta proposta (por aprovar)" : "Última resposta guardada (já tratada)";
-  if (!c.lastCustomerEmailPt && !c.proposedReplyPt && c.images.length === 0) return null;
+  if (!c.lastCustomerEmailPt && !c.proposedReplyPt && c.images.length === 0 && !c.photosLink) return null;
   return (
     <div className="flex flex-col gap-2">
       {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
@@ -347,6 +347,15 @@ function Latest({ c }: { c: CsCaseView }) {
               </a>
             ))}
           </div>
+        </div>
+      )}
+      {c.photosLink && c.images.length === 0 && (
+        <div className="mr-auto max-w-[92%] rounded-lg border border-border bg-muted/40 p-2.5 text-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">Fotografias do cliente</p>
+          <a href={c.photosLink.url} target="_blank" rel="noreferrer" className="mt-1 inline-block font-medium text-primary underline">
+            {c.photosLink.count > 0 ? `Ver as ${c.photosLink.count} fotografias no email original` : "Ver as fotografias no email original"}
+          </a>
+          <p className="text-xs opacity-70">Abre no webmail do Hostinger (é preciso ter a sessão iniciada).</p>
         </div>
       )}
       {c.proposedReplyPt ? <Bubble role="proposta" title={title} body={c.proposedReplyPt} /> : null}
