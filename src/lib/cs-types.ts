@@ -113,7 +113,7 @@ export type CsCaseView = {
   decision: CsDecision | null;
   compensation: CompensationView | null;
   pfDispute: { status: string; openedAt: string | null; supplierReply: string; inOurInterest: boolean | null } | null;
-  addressAdjusted: { done: boolean; at: string | null; orderName: string; address: string } | null;
+  addressAdjusted: { done: boolean; at: string | null; orderName: string; address: string; customerNotifiedAt: string | null } | null;
   ageDays: number;
   openedAt: string;
   createdAt: string;

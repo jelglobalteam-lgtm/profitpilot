@@ -88,7 +88,7 @@ const CsCaseSchema = new Schema(
     pfDispute: { type: PfDisputeSchema, default: null },
     /** Morada ajustada na PrimeFlow (pela rotina ou pelo Emanuel). */
     addressAdjusted: {
-      type: new Schema({ done: Boolean, at: Date, orderName: String, address: String }, { _id: false }),
+      type: new Schema({ done: Boolean, at: Date, orderName: String, address: String, customerNotifiedAt: Date }, { _id: false }),
       default: null,
     },
     decidedAt: { type: Date, default: null },

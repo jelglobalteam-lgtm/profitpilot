@@ -80,6 +80,7 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
           at: d.addressAdjusted.at ? new Date(d.addressAdjusted.at).toISOString() : null,
           orderName: d.addressAdjusted.orderName ?? "",
           address: d.addressAdjusted.address ?? "",
+          customerNotifiedAt: d.addressAdjusted.customerNotifiedAt ? new Date(d.addressAdjusted.customerNotifiedAt).toISOString() : null,
         }
       : null,
     ageDays: Math.max(0, ageDays),

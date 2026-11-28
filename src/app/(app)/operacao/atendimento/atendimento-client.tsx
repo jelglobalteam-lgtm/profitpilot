@@ -374,11 +374,34 @@ function AddressStatus({ c, mia }: { c: CsCaseView; mia: CsMiaMessageView[] }) {
   } else if (!adj) {
     miaTone = "border-warning/60 bg-warning/10";
   }
+  const miaConfirmed = last?.status === "respondida";
+  const mustInform = !!adj || miaConfirmed;
+  const informed = !!adj?.customerNotifiedAt;
+  let clientTone = "border-border";
+  let clientText = "Cliente: ainda sem alteração a comunicar.";
+  if (mustInform && informed) {
+    clientTone = "border-accent/40 bg-accent/10";
+    clientText = `Cliente: já avisado da alteração a ${fmtWhen(adj?.customerNotifiedAt)}.`;
+  } else if (mustInform) {
+    clientTone = "border-warning/60 bg-warning/10";
+    clientText = "Cliente: falta avisar que a morada foi atualizada. O cliente não vai escrever outra vez, por isso a rotina prepara a confirmação e fica em Para aprovar.";
+  }
+  const nextStep = adj
+    ? informed
+      ? "Tratado: nada a fazer."
+      : "Nada a fazer na PrimeFlow (já alterada pela rotina). Só falta aprovar a confirmação ao cliente."
+    : last?.status === "enviada"
+      ? "À espera da resposta da Mia."
+      : last?.status === "rascunho"
+        ? "Envie o pedido à Mia (secção Mia)."
+        : "A rotina ainda não tratou a morada.";
   return (
     <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
       <p className="text-[13px] font-medium">Ponto de situação da morada</p>
+      <p className="text-xs text-muted-foreground">{nextStep}</p>
       <p className={`rounded-md border p-2 ${primeTone}`}><span className="font-medium">PrimeFlow:</span> {prime}</p>
       <p className={`rounded-md border p-2 ${miaTone}`}><span className="font-medium">Mia:</span> {miaText}</p>
+      <p className={`rounded-md border p-2 ${clientTone}`}>{clientText}</p>
     </div>
   );
 }
