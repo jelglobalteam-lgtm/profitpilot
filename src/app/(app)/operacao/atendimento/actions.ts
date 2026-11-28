@@ -119,12 +119,14 @@ export async function closeCsCaseAction(input: z.infer<typeof closeSchema>): Pro
   if (!p.success || !oid(p.data.caseId)) return { error: "Dados inválidos." };
   await connectToDatabase();
   const wid = new mongoose.Types.ObjectId(user.workspaceId);
+  const prev = await CsCase.findOne({ _id: p.data.caseId, workspaceId: wid }, { timeline: 1 }).lean();
+  const nextN = ((prev?.timeline as unknown[] | undefined)?.length ?? 0) + 1;
   const c = await CsCase.findOneAndUpdate(
     { _id: p.data.caseId, workspaceId: wid },
     p.data.addressAdjusted
       ? {
-          $set: { status: "resolvido" },
-          $push: { timeline: { at: new Date(), n: 0, summary: "Morada ajustada na PrimeFlow (confirmado pelo Emanuel)" } },
+          $set: { status: "resolvido", addressAdjusted: { done: true, at: new Date(), orderName: "", address: "" } },
+          $push: { timeline: { at: new Date(), n: nextN, summary: "Morada ajustada na PrimeFlow (confirmado pelo Emanuel)" } },
         }
       : { $set: { status: "resolvido" } },
   );

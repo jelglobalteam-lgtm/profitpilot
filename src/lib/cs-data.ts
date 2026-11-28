@@ -74,6 +74,14 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
           inOurInterest: d.pfDispute.inOurInterest ?? null,
         }
       : null,
+    addressAdjusted: d.addressAdjusted
+      ? {
+          done: !!d.addressAdjusted.done,
+          at: d.addressAdjusted.at ? new Date(d.addressAdjusted.at).toISOString() : null,
+          orderName: d.addressAdjusted.orderName ?? "",
+          address: d.addressAdjusted.address ?? "",
+        }
+      : null,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
     createdAt: new Date(d.createdAt ?? d.openedAt).toISOString(),

@@ -116,7 +116,7 @@ export function AtendimentoClient({ data, quotes, cogsChanges, shipments, invoic
           { id: "geral", label: "Visão geral" },
         ]}
       />
-      {tab === "casos" && <CasesTab cases={data.cases} canEdit={canEdit} />}
+      {tab === "casos" && <CasesTab cases={data.cases} mia={data.mia} canEdit={canEdit} />}
       {tab === "templates" && <TemplatesTab templates={data.templates} canEdit={canEdit} />}
       {tab === "mia" && <MiaTab messages={data.mia} canEdit={canEdit} />}
       {tab === "produtos" && <ProductsTab cases={data.cases} />}
@@ -167,7 +167,7 @@ function isPending(c: CsCaseView): boolean {
   return g === "para_aprovar" || g === "escalar" || g === "reembolso" || isAddress(c);
 }
 
-function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean }) {
+function CasesTab({ cases, mia, canEdit }: { cases: CsCaseView[]; mia: CsMiaMessageView[]; canEdit: boolean }) {
   const [status, setStatus] = useState<CaseGroup>("pendente");
   const [store, setStore] = useState<CsStoreKey | "all">("all");
   const [selected, setSelected] = useState<string | null>(null);
@@ -257,7 +257,7 @@ function CasesTab({ cases, canEdit }: { cases: CsCaseView[]; canEdit: boolean })
         </div>
         <div>
           {current ? (
-            <CaseCard key={current.id} c={current} canEdit={canEdit} />
+            <CaseCard key={current.id} c={current} mia={mia.filter((m) => m.caseId === current.id)} canEdit={canEdit} />
           ) : (
             <p className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
               Selecione um caso para ver o resumo e a resposta proposta.
@@ -303,8 +303,8 @@ const ROLE_LABEL: Record<TlRole, string> = {
   sistema: "Rotina",
 };
 
-function Bubble({ role, meta, body, at }: { role: TlRole | "proposta"; meta?: string; body: string; at?: string | null }) {
-  const label = role === "proposta" ? "Resposta proposta (por aprovar)" : ROLE_LABEL[role];
+function Bubble({ role, meta, body, at, title }: { role: TlRole | "proposta"; meta?: string; body: string; at?: string | null; title?: string }) {
+  const label = title ?? (role === "proposta" ? "Resposta proposta (por aprovar)" : ROLE_LABEL[role]);
   const side = role === "cliente" ? "mr-auto" : role === "nos" || role === "proposta" ? "ml-auto" : "mx-auto";
   const tone =
     role === "cliente"
@@ -330,11 +330,55 @@ function Bubble({ role, meta, body, at }: { role: TlRole | "proposta"; meta?: st
 }
 
 function Latest({ c }: { c: CsCaseView }) {
+  const open = c.status === "para_aprovar" || c.status === "reembolso" || c.status === "escalar";
+  const title = open ? "Resposta proposta (por aprovar)" : "Última resposta guardada (já tratada)";
   if (!c.lastCustomerEmailPt && !c.proposedReplyPt) return null;
   return (
     <div className="flex flex-col gap-2">
       {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
-      {c.proposedReplyPt ? <Bubble role="proposta" body={c.proposedReplyPt} /> : null}
+      {c.proposedReplyPt ? <Bubble role="proposta" title={title} body={c.proposedReplyPt} /> : null}
+    </div>
+  );
+}
+
+function fmtWhen(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+}
+
+/** Ponto de situação de um pedido de alteração de morada: PrimeFlow e Mia. */
+function AddressStatus({ c, mia }: { c: CsCaseView; mia: CsMiaMessageView[] }) {
+  const adj = c.addressAdjusted?.done ? c.addressAdjusted : null;
+  const sorted = [...mia].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const last = sorted[0];
+  let primeTone = "border-warning/60 bg-warning/10";
+  let prime = "Ainda não alterada na PrimeFlow.";
+  if (adj) {
+    primeTone = "border-accent/40 bg-accent/10";
+    prime = `Alterada na PrimeFlow${adj.at ? ` a ${fmtWhen(adj.at)}` : ""}${adj.orderName ? ` (${adj.orderName})` : ""}: ${adj.address}.`;
+  }
+  let miaTone = "border-border";
+  let miaText = adj ? "Pedido à Mia não necessário, a morada já foi alterada." : "Sem pedido à Mia preparado.";
+  if (last) {
+    if (last.status === "respondida") {
+      miaTone = "border-accent/40 bg-accent/10";
+      miaText = `Mia respondeu${last.reply ? `: ${last.reply}` : "."}`;
+    } else if (last.status === "enviada") {
+      miaTone = "border-warning/60 bg-warning/10";
+      miaText = `Pedido enviado à Mia a ${fmtWhen(last.updatedAt)}, sem resposta registada.`;
+    } else if (adj) {
+      miaText = "Rascunho para a Mia por enviar, mas já não é preciso (morada alterada na PrimeFlow).";
+    } else {
+      miaTone = "border-warning/60 bg-warning/10";
+      miaText = "Pedido à Mia preparado, ainda por enviar. Copie-o na secção Mia.";
+    }
+  } else if (!adj) {
+    miaTone = "border-warning/60 bg-warning/10";
+  }
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+      <p className="text-[13px] font-medium">Ponto de situação da morada</p>
+      <p className={`rounded-md border p-2 ${primeTone}`}><span className="font-medium">PrimeFlow:</span> {prime}</p>
+      <p className={`rounded-md border p-2 ${miaTone}`}><span className="font-medium">Mia:</span> {miaText}</p>
     </div>
   );
 }
@@ -361,7 +405,7 @@ function Conversation({ c }: { c: CsCaseView }) {
   );
 }
 
-function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
+function CaseCard({ c, mia, canEdit }: { c: CsCaseView; mia: CsMiaMessageView[]; canEdit: boolean }) {
   const { run, pending, error } = useRun();
   const [dialog, setDialog] = useState<"rejeitado" | "escalado" | null>(null);
   const [reason, setReason] = useState("");
@@ -382,6 +426,8 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
       }),
     );
   const refundLocked = c.status === "reembolso" || c.classification === "vermelho";
+  const canDecide = (c.status === "para_aprovar" || c.status === "reembolso" || c.status === "escalar") && groupOf(c) !== "aprovado";
+  const showAddressButton = isAddress(c) && !c.addressAdjusted?.done;
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
@@ -433,6 +479,7 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           </p>
         </div>
       )}
+      {c.issueType === "alteracao_morada" && <AddressStatus c={c} mia={mia} />}
       <Latest c={c} />
 
       <details className="rounded-lg border border-border p-3 text-sm">
@@ -480,8 +527,9 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
       )}
       {error && <p className="text-sm text-negative">{error}</p>}
 
-      {canEdit && groupOf(c) !== "aprovado" && (
+      {canEdit && (canDecide || showAddressButton || c.status === "escalar" || c.status === "reembolso") && (
         <div className="flex flex-wrap gap-2">
+          {canDecide && (<>
           <button
             type="button"
             disabled={pending}
@@ -512,7 +560,8 @@ function CaseCard({ c, canEdit }: { c: CsCaseView; canEdit: boolean }) {
           >
             Escalar
           </button>
-          {isAddress(c) && (
+          </>)}
+          {showAddressButton && (
             <button
               type="button"
               disabled={pending}

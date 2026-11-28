@@ -86,6 +86,11 @@ const CsCaseSchema = new Schema(
     decision: { type: String, enum: [...CS_DECISIONS, null], default: null },
     compensation: { type: CompensationSchema, default: null },
     pfDispute: { type: PfDisputeSchema, default: null },
+    /** Morada ajustada na PrimeFlow (pela rotina ou pelo Emanuel). */
+    addressAdjusted: {
+      type: new Schema({ done: Boolean, at: Date, orderName: String, address: String }, { _id: false }),
+      default: null,
+    },
     decidedAt: { type: Date, default: null },
     decidedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     openedAt: { type: Date, default: () => new Date() },
