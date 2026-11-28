@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { CsCase, type CsCaseDoc } from "@/models/CsCase";
 import { CsTemplate, type CsTemplateDoc } from "@/models/CsTemplate";
+import { CsCaseImage } from "@/models/CsCaseImage";
 import { CsMiaMessage, type CsMiaMessageDoc } from "@/models/CsMiaMessage";
 import type { CompensationStatus } from "@/lib/cs-compensation";
 import { CS_SEED_TEMPLATES } from "@/lib/cs-seed";
@@ -19,7 +20,7 @@ import type {
 
 const DAY_MS = 86_400_000;
 
-function toCaseView(d: CsCaseDoc): CsCaseView {
+function toCaseView(d: CsCaseDoc, images: { id: string; name: string }[] = []): CsCaseView {
   const ageDays = Math.floor((Date.now() - new Date(d.openedAt).getTime()) / DAY_MS);
   return {
     id: String(d._id),
@@ -83,6 +84,7 @@ function toCaseView(d: CsCaseDoc): CsCaseView {
           customerNotifiedAt: d.addressAdjusted.customerNotifiedAt ? new Date(d.addressAdjusted.customerNotifiedAt).toISOString() : null,
         }
       : null,
+    images,
     ageDays: Math.max(0, ageDays),
     openedAt: new Date(d.openedAt).toISOString(),
     createdAt: new Date(d.createdAt ?? d.openedAt).toISOString(),
@@ -157,8 +159,16 @@ export async function loadCsData(workspaceId: string) {
       .limit(200)
       .lean<CsMiaMessageDoc[]>(),
   ]);
+  const imgs = await CsCaseImage.find({ workspaceId: wid, caseId: { $in: cases.map((c) => c._id) } }, { name: 1, caseId: 1 })
+    .sort({ createdAt: 1 })
+    .lean<{ _id: mongoose.Types.ObjectId; name: string; caseId: mongoose.Types.ObjectId }[]>();
+  const byCase = new Map<string, { id: string; name: string }[]>();
+  for (const i of imgs) {
+    const k = String(i.caseId);
+    byCase.set(k, [...(byCase.get(k) ?? []), { id: String(i._id), name: i.name ?? "" }]);
+  }
   return {
-    cases: cases.map(toCaseView),
+    cases: cases.map((c) => toCaseView(c, byCase.get(String(c._id)) ?? [])),
     templates: templates.map(toTemplateView),
     mia: mia.map(toMiaView),
   };

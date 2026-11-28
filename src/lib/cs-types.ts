@@ -114,6 +114,7 @@ export type CsCaseView = {
   compensation: CompensationView | null;
   pfDispute: { status: string; openedAt: string | null; supplierReply: string; inOurInterest: boolean | null } | null;
   addressAdjusted: { done: boolean; at: string | null; orderName: string; address: string; customerNotifiedAt: string | null } | null;
+  images: { id: string; name: string }[];
   ageDays: number;
   openedAt: string;
   createdAt: string;

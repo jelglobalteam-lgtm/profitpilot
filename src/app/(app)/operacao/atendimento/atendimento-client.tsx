@@ -332,10 +332,23 @@ function Bubble({ role, meta, body, at, title }: { role: TlRole | "proposta"; me
 function Latest({ c }: { c: CsCaseView }) {
   const open = c.status === "para_aprovar" || c.status === "reembolso" || c.status === "escalar";
   const title = open ? "Resposta proposta (por aprovar)" : "Última resposta guardada (já tratada)";
-  if (!c.lastCustomerEmailPt && !c.proposedReplyPt) return null;
+  if (!c.lastCustomerEmailPt && !c.proposedReplyPt && c.images.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
       {c.lastCustomerEmailPt ? <Bubble role="cliente" meta="Último email do cliente (PT)" body={c.lastCustomerEmailPt} /> : null}
+      {c.images.length > 0 && (
+        <div className="mr-auto max-w-[92%] rounded-lg border border-border bg-muted/40 p-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">Fotografias do cliente ({c.images.length})</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {c.images.map((im) => (
+              <a key={im.id} href={`/api/cs-images/${im.id}`} target="_blank" rel="noreferrer" title={im.name}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/cs-images/${im.id}`} alt={im.name || "Fotografia do cliente"} className="h-36 w-auto max-w-[240px] rounded-md border border-border object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
       {c.proposedReplyPt ? <Bubble role="proposta" title={title} body={c.proposedReplyPt} /> : null}
     </div>
   );
